@@ -25,6 +25,10 @@ class cafe_robot_total():
  def single_robot_bringup(self):
   subprocess.Popen('roslaunch machine asus_turtlebot_bringup.launch',shell=True)
 
+ #启动动态3D模型
+ #def dynamic_edit_map(self):
+  #subprocess.Popen('roslaunch dynamic_3d_view dynamic_3d_view.launch',shell=True)
+
  #启动amcl
  def single_amcl(self):
   subprocess.Popen('roslaunch machine asus_robot_amcl.launch',shell=True)

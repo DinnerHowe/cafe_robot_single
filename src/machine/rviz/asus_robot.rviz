@@ -340,6 +340,12 @@ Visualization Manager:
       Single click: false
       Topic: /clicked_point
     - Class: rviz/Measure
+    - Class: rviz_my_tools/Tropical_Plant
+    - Class: rviz_my_tools/Potting
+    - Class: rviz_my_tools/TeaTable
+    - Class: rviz_my_tools/Dog
+    - Class: rviz_my_tools/Finish
+    
   Value: true
   Views:
     Current:

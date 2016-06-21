@@ -7,6 +7,8 @@ Copyright (c) 2015 Xu Zhihao (Howe).  All rights reserved.
 This program is free software; you can redistribute it and/or modify
 This programm is tested on kuboki base turtlebot. 
 """
+"""请先安装CV2"""
+
 import rospy,cv2,numpy,os
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
