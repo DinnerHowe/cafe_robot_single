@@ -97,7 +97,7 @@ FinishTool::~FinishTool()
 // is left as an exercise for the reader.
 void* reloadmapf(void* args)
 {
-    system("rosrun map_server map_server /home/turtlebot/cafe_robot_single/src/nav_staff/map/edited_map.yaml");
+    system("rosrun map_server map_server /home/rocwang/cafe_robot_single/src/nav_staff/map/edited_map.yaml");
 
 }
 
@@ -105,7 +105,7 @@ void FinishTool::activate()
 {
   Mat image;
 
-  image = imread( "/home/turtlebot/cafe_robot_single/src/nav_staff/map/office_map_manual.pgm");
+  image = imread( "/home/rocwang/cafe_robot_single/src/nav_staff/map/office_map_manual.pgm");
   Mat outimage;
   cvtColor( image, outimage, CV_BGR2GRAY );
   int nRows = outimage.rows;
@@ -135,7 +135,7 @@ void FinishTool::activate()
     
   namedWindow( "zly", CV_WINDOW_AUTOSIZE );
   namedWindow("outimage",CV_WINDOW_AUTOSIZE);
-  imwrite("/home/turtlebot/cafe_robot_single/src/nav_staff/map/edited_map.pgm",outimage);
+  imwrite("/home/rocwang/cafe_robot_single/src/nav_staff/map/edited_map.pgm",outimage);
   imshow( "zly", image );
   imshow("outimage",outimage);
   // waitKey(0);
