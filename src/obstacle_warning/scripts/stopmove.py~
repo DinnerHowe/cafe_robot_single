@@ -62,7 +62,7 @@ def stopmove():
     #state = GoalStatus.SUCCEEDED
     #stopStates = [GoalStatus.ABORTED,GoalStatus.PREEMPTED,GoalStatus.REJECTED,GoalStatus.RECALLED]
     
-    move_base.cancel_goal()
+    #move_base.cancel_goal()
     
     #while (state not in stopStates):
         #new_goal = MoveBaseGoal()
@@ -72,7 +72,7 @@ def stopmove():
         #rospy.sleep(0.5)
         #move_base.cancel_goal()
         #state = move_base.get_state()
-    #move_base.cancel_goal()
+    move_base.cancel_goal()
     #for i in range(2):
         #pubStopMess.publish(twist)
         #pub.publish(twist)

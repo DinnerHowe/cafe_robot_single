@@ -70,21 +70,21 @@ class camera_image():
   else:
    self.clear+=1
 
-  #if self.clear>10 and self.warning_info=='ahead':
-   #self.stop_error=0
-   #self.once=True
-   #try:
-    #cv2.destroyWindow(self.ns)
-    #self.define()
-    #self.once=False
-    #self.clear_finish=True
-    #self.clear=0
+  if self.clear>10 and self.warning_info=='ahead':
+   self.stop_error=0
+   self.once=True
+   try:
+    cv2.destroyWindow(self.ns)
+    self.define()
+    self.once=False
+    self.clear_finish=True
+    self.clear=0
     #os.system('rosnode kill /camera_image')
     #os.system('rosnode kill /stopmove')
     #os.system('rosnode kill /pioneer_laser_node')
-    #print 'destroyWindow '
-   #except:
-    #pass
+    print 'destroyWindow '
+   except:
+    pass
 
   if self.warning_info=='stop' or self.once:
    #if self.stop_error>2:
