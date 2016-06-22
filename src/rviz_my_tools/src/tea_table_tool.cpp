@@ -193,7 +193,7 @@ int TeaTableTool::processMouseEvent( rviz::ViewportMouseEvent& event )
         }
         else
         {
-          myfile<<3<<endl<<intersection.x+6.5<<endl<<intersection.y+6.5<<endl;
+          myfile<<3<<endl<<intersection.x+5.87311236235758<<endl<<intersection.y+6.082926101916<<endl;
           myfile.close();
         }
         current_flag_property_ = NULL; // Drop the reference so that deactivate() won't remove it.
