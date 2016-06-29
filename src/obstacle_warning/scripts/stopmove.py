@@ -50,36 +50,36 @@ def addFlag():
 
 
 def stopmove():   
-    #pubStopMess = rospy.Publisher('cmd_vel',Twist,queue_size=100)
+    pubStopMess = rospy.Publisher('cmd_vel',Twist,queue_size=100)
     pub = rospy.Publisher('cmd_vel_mux/input/navi',Twist,queue_size=100)
     twist = Twist()
-    #twist.linear.x, twist.linear.y, twist.linear.z = 0, 0, 0
-    #twist.angular.x, twist.angular.y, twist.angular.z = 0, 0, 0
+    twist.linear.x, twist.linear.y, twist.linear.z = 0, 0, 0
+    twist.angular.x, twist.angular.y, twist.angular.z = 0, 0, 0
     move_base = actionlib.SimpleActionClient("move_base", MoveBaseAction)
     rospy.loginfo("waiting fro move_base action server")
     move_base.wait_for_server(rospy.Duration(60)) 
     
-    #state = GoalStatus.SUCCEEDED
-    #stopStates = [GoalStatus.ABORTED,GoalStatus.PREEMPTED,GoalStatus.REJECTED,GoalStatus.RECALLED]
+    state = GoalStatus.SUCCEEDED
+    stopStates = [GoalStatus.ABORTED,GoalStatus.PREEMPTED,GoalStatus.REJECTED,GoalStatus.RECALLED]
     
     move_base.cancel_goal()
     
-    #while (state not in stopStates):
-        #new_goal = MoveBaseGoal()
-        #new_goal.target_pose.header.frame_id = 'map'
-        #new_goal.target_pose.header.stamp = rospy.Time.now()
-        #move_base.send_goal(new_goal)
-        #rospy.sleep(0.5)
-        #move_base.cancel_goal()
-        #state = move_base.get_state()
-    #move_base.cancel_goal()
-    #for i in range(2):
-        #pubStopMess.publish(twist)
-        #pub.publish(twist)
-    #pubStopMess.publish(twist)
+    while (state not in stopStates):
+        new_goal = MoveBaseGoal()
+        new_goal.target_pose.header.frame_id = 'map'
+        new_goal.target_pose.header.stamp = rospy.Time.now()
+        move_base.send_goal(new_goal)
+        rospy.sleep(0.5)
+        move_base.cancel_goal()
+        state = move_base.get_state()
+    move_base.cancel_goal()
+    for i in range(2):
+        pubStopMess.publish(twist)
+        pub.publish(twist)
+    pubStopMess.publish(twist)
     pub.publish(twist)
-    #move_base.cancel_goal()
-    #rospy.sleep(0.5)
+    move_base.cancel_goal()
+    rospy.sleep(0.5)
     addFlag()
 
 def callback(data):

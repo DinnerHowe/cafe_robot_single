@@ -6,7 +6,7 @@ This programm is tested on kuboki base turtlebot."""
 
 
 from pyaudio import PyAudio, paInt16
-import json,base64,os,sys,requests,wave,struct,pygame,vlc,rospy,getpass
+import json,os,sys,requests,vlc,rospy,getpass
 import numpy as np 
 from std_msgs.msg import String
 #from pydub import AudioSegment

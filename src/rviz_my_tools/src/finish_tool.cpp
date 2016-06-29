@@ -97,15 +97,36 @@ FinishTool::~FinishTool()
 // is left as an exercise for the reader.
 void* reloadmapf(void* args)
 {
-    system("rosrun map_server map_server /home/rocwang/cafe_robot_single/src/nav_staff/map/edited_map.yaml");
+  char *q=getenv("USER");
+  string username(q);
+  string rootpath="/home/";
+  rootpath+=username;
+  rootpath+="/cafe_robot_single/";
+  string filepath4=rootpath+"src/nav_staff/map/edited_map.yaml";
+  string command="rosrun map_server map_server "+filepath4;
+  char* c5;
+  int len = command.length();
+  c5 =new char[len+1];
+  strcpy(c5,command.c_str());
+  system(c5);
 
 }
 
 void FinishTool::activate()
 {
   Mat image;
+  char *q=getenv("USER");
+  string username(q);
+  string rootpath="/home/";
+  rootpath+=username;
+  rootpath+="/cafe_robot_single/";
+  string filepath1=rootpath+"src/nav_staff/map/office_map_manual.pgm";
+//  char* c1;
+//  int len = filepath1.length();
+//  c1 =new char[len+1];
+//  strcpy(c1,filepath1.c_str());
 
-  image = imread( "/home/rocwang/cafe_robot_single/src/nav_staff/map/office_map_manual.pgm");
+  image = imread(filepath1);
   Mat outimage;
   cvtColor( image, outimage, CV_BGR2GRAY );
   int nRows = outimage.rows;
@@ -114,8 +135,17 @@ void FinishTool::activate()
 
   float kind,i,j;
   uchar* p;
+
+  
+  string filepath2=rootpath+"obstacles.txt";  
+  char* c2;
+  int len = filepath2.length();
+  c2 =new char[len+1];
+  strcpy(c2,filepath2.c_str());
   fstream file;
-  file.open("obstacles.txt",ios::in);
+  file.open(c2,ios::in);//example.txt是你要输出的文件的名字
+
+
   while(!file.eof())
   {
     file>>kind;
@@ -131,11 +161,23 @@ void FinishTool::activate()
     }
   }
   file.close();
-  system("rm obstacles.txt");
+
+  string command="rm ";
+  command+=filepath2;
+  char* c4;
+  len = command.length();
+  c4 =new char[len+1];
+  strcpy(c4,command.c_str());
+  system(c4);
     
   namedWindow( "zly", CV_WINDOW_AUTOSIZE );
   namedWindow("outimage",CV_WINDOW_AUTOSIZE);
-  imwrite("/home/rocwang/cafe_robot_single/src/nav_staff/map/edited_map.pgm",outimage);
+  string filepath3=rootpath+"src/nav_staff/map/edited_map.pgm";
+//  char* c3;
+//  len = filepath3.length();
+//  c3 =new char[len+1];
+//  strcpy(c3,filepath3.c_str());
+  imwrite(filepath3,outimage);
   imshow( "zly", image );
   imshow("outimage",outimage);
   // waitKey(0);

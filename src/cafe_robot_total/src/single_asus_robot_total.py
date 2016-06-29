@@ -20,11 +20,14 @@ class cafe_robot_total():
   self.bringup_ready=False
   self.finish=False
   
-
  #启动机器
  def single_robot_bringup(self):
   subprocess.Popen('roslaunch machine asus_turtlebot_bringup.launch',shell=True)
 
+ #获取路径
+ def get_path(self):
+  subprocess.Popen('rosrun rviz_my_tools path.py',shell=True)
+  
  #启动动态3D模型
  #def dynamic_edit_map(self):
   #subprocess.Popen('roslaunch dynamic_3d_view dynamic_3d_view.launch',shell=True)
@@ -83,6 +86,7 @@ class cafe_robot_total():
    
   if self.finish:
    self.finish=False
+   self.get_path()
    self.RVIZ()
 
   

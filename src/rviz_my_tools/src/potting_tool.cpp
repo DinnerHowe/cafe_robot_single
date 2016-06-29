@@ -187,14 +187,52 @@ int PottingTool::processMouseEvent( rviz::ViewportMouseEvent& event )
       if( event.leftDown() )
       {
         makeFlag( intersection );
-        ofstream myfile("obstacles.txt",ios::app);  //example.txt是你要输出的文件的名字
+
+
+        char *p=getenv("USER");
+        string username(p);
+        string filepath="/home/";
+        filepath+=username;
+        filepath+="/cafe_robot_single/obstacles.txt";
+        char* c;
+        int len = filepath.length();
+        c =new char[len+1];
+        strcpy(c,filepath.c_str());
+        ofstream myfile(c,ios::app);//example.txt是你要输出的文件的名字
+
+        filepath="/home/";
+        filepath+=username;
+        filepath+="/cafe_robot_single/src/nav_staff/map/office_map_manual.yaml";
+        char* d;
+        len = filepath.length();
+        d =new char[len+1];
+        strcpy(d,filepath.c_str());
+        fstream file;
+        file.open(d);
+        string text;
+        int i=0;
+        while(i<6)
+        {
+          file>>text;
+          i++;
+        } 
+        stringstream ss(text);
+        float f1,f2;
+        char c1,c2;
+        ss>>c1>>f1>>c2;
+        file>>text;
+        stringstream ss1(text);
+        ss1>>f2>>c2;
+        file.close();
+
+
         if(!myfile)
         {
           cout<<"error !";
         }
         else
         {
-          myfile<<2<<endl<<intersection.x+5.87311236235758<<endl<<intersection.y+6.082926101916<<endl;
+          myfile<<2<<endl<<intersection.x-f1<<endl<<intersection.y-f2<<endl;
           myfile.close();
         }
         current_flag_property_ = NULL; // Drop the reference so that deactivate() won't remove it.
