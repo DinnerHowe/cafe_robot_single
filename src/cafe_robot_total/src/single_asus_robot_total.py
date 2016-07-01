@@ -26,7 +26,7 @@ class cafe_robot_total():
 
  #获取路径
  def get_path(self):
-  subprocess.Popen('rosrun rviz_my_tools path.py',shell=True)
+  subprocess.call('rosrun rviz_my_tools path.py',shell=True)
   
  #启动动态3D模型
  #def dynamic_edit_map(self):
