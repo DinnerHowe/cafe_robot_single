@@ -10,3 +10,5 @@ obstacle_warning 遇到障碍物在用户界面弹出警告，并且停止任务
 robot_bringup 机器启动
 tasks 任务管理
 simple_voice 语音交互
+
+rosrun nav_staff init_pose_handle.py 手动键盘设置初始点

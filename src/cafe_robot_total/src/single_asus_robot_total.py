@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #coding=utf-8
 """
-fake robot total program
+single asus sensor robot total program
 
 Copyright (c) 2015 Xu Zhihao (Howe).  All rights reserved.
 This program is free software; you can redistribute it and/or modify
@@ -26,7 +26,7 @@ class cafe_robot_total():
 
  #获取路径
  def get_path(self):
-  subprocess.call('rosrun rviz_my_tools path.py',shell=True)
+  subprocess.call('rosrun machine path.py',shell=True)
   
  #启动动态3D模型
  #def dynamic_edit_map(self):

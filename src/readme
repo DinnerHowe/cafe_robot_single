@@ -1,0 +1,9 @@
+一键启动机器
+roslaunch cafe_robot_total single_asus_robot_total.launch
+
+初始化位置 
+rosrun nav_staff init_pose_handle.py
+
+批量授权
+cd ~/cafe_robot_single
+python chmod_to_all.py

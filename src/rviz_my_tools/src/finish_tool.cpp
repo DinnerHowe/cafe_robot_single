@@ -147,6 +147,30 @@ void FinishTool::activate()
 //  int len = filepath1.length();
 //  c1 =new char[len+1];
 //  strcpy(c1,filepath1.c_str());
+  string edited_map_path=rootpath+"nav_staff/map/edited_map.yaml";
+  string origin_map_path=rootpath+"nav_staff/map/office_map_manual.yaml";
+  char* b;
+  len = edited_map_path.length();
+  b =new char[len+1];
+  strcpy(b,edited_map_path.c_str());
+  char* b1;
+  len = origin_map_path.length();
+  b1 =new char[len+1];
+  strcpy(b1,origin_map_path.c_str());
+
+  fstream infile(b1);
+  string line;
+  ofstream outfile(b,ios::out|ios::trunc);
+  outfile<<"image: edited_map.pgm"<<endl;
+  getline(infile,line);
+  while(!infile.eof())
+  {
+      getline(infile,line);
+      outfile<<line<<endl;
+  }
+  outfile.close();
+  infile.close();
+
 
   image = imread(filepath1);
   Mat outimage;

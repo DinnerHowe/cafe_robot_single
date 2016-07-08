@@ -1,5 +1,28 @@
 <launch>
-  <node pkg="obstacle_warning" type="stopmove.py" name="stopmove"  output="screen">
+  <!--<node pkg="obstacle_warning" type="stopmove.py" name="stopmove"  output="screen">
+  </node>-->
+  <arg name="stop_flag_topic"                   default="/stop_flag" />
+  
+  <arg name="warning_marker_topic"              default="/warning_marker" />
+  
+  <arg name="StopMoving_topic"                    default="/cmd_vel_mux/input/teleop" />
+  
+  <arg name="action_topic"                      default="move_base" />
+  
+  <arg name="turtlebot_position_topic"          default="turtlebot_position_in_map" />
+  
+  <node pkg="obstacle_warning" type="stopmove_edit.py" name="stopmove"  output="screen">
+  
+   <param name='stop_flag_topic'                value="$(arg stop_flag_topic)" />
+   
+   <param name='warning_marker_topic'           value="$(arg warning_marker_topic)" />
+   
+   <param name="StopMoving_topic"                 value="$(arg StopMoving_topic)" />
+   
+   <param name='action_topic'                   value="$(arg action_topic)" />
+   
+   <param name='turtlebot_position_topic'       value="$(arg turtlebot_position_topic)" />
+   
   </node>
     
   <node pkg="obstacle_warning" type="detect" name="multi_pioneer_laser_node"  output="screen">

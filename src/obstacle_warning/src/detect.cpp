@@ -13,7 +13,7 @@
 using namespace std;
 
 std_msgs::String flag;
-float max_dis = 0.5;
+float max_dis = 0.8;
 string pre_data  = "go";
 
 bool map_init = false;
