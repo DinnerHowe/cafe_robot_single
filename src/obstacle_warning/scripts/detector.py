@@ -21,8 +21,8 @@ class laser_point():
   self.coor=[]
   self.static_area=[]
   self.points_marker=Marker()
-  self.cut_points=[]
-  
+  self.cut_points=[]#中分线的上下左右终点
+  self.centre_points=[]
   
   if not rospy.has_param('~stop_flag_topic'):
    rospy.set_param('~stop_flag_topic','/stop_flag')
@@ -46,55 +46,162 @@ class laser_point():
  def statice_area(self):
   self.static_area=maplib.get_effective_point(self.map)[1]
   self.points_marker=self.visual_test(self.static_area,Marker.POINTS)
+  #self.static_area=[point1,point2,point3...]
   
   #geohash算法区域划分
   width=self.map.info.width
   height=self.map.info.height
-  resolution=self.map.info.resolution
   map_origin=self.map.info.origin
-  key=['map_']
-  map_dict={'%s'%key[0]:self.static_area}
   
-  self.geohash(key, map_dict, width, height, resolution, map_origin, 1, 1)
+  self.geohash(self.static_area, width, height, map_origin)
  
  #地图区域划分 
- def geohash(self, key, map_dict, width, height, resolution, map_origin, X, Y):
-  #获取中心点坐标
-  pose_mean=Point()
+ def geohash(self, data, width, height, map_origin):
+  #获取中心点坐标(testing _map_divide_store开发完了删掉)
   line=[]
   linex_start=Point()
   linex_end=Point()
   liney_start=Point()
   liney_end=Point()
   
-  pose_mean.x=(width/2)*resolution*X+map_origin.position.x
-  pose_mean.y=(height/2)*resolution*Y+map_origin.position.y
+  (X,Y)=(1,1)
+  
+  pose_mean=Point()
+  pose_mean.x=(width/2)*self.map.info.resolution*X+map_origin.position.x
+  pose_mean.y=(height/2)*self.map.info.resolution*Y+map_origin.position.y
   
   linex_start.x=pose_mean.x
   linex_start.y=map_origin.position.y
   linex_end.x=pose_mean.x
-  linex_end.y=map_origin.position.y+resolution*height*Y
+  linex_end.y=map_origin.position.y+self.map.info.resolution*height*Y
 
   liney_start.y=pose_mean.y
   liney_start.x=map_origin.position.x
   liney_end.y=pose_mean.y  
-  liney_end.x=map_origin.position.x+resolution*width*X
+  liney_end.x=map_origin.position.x+self.map.info.resolution*width*X
   
   line=[linex_start,linex_end,liney_start,liney_end]
+
   self.cut_points.append(linex_start,linex_end,liney_start,liney_end)
   
   self.line_marker=self.visual_test(line,Marker.LINE_LIST)#标记出第一层区域划分（testing）
   
-  width/=2
-  height/=2
-  map_origin.position=pose_mean  
+################################################################
+ 
+  self._map_divide_store(width, height, data, map_origin, (X,Y))
   
-  self._map_divide_store(width,height,data,map_origin)
   
+  
+  
+################################################################
  #地图划分区域存储 
- def _map_divide_store(self,width,height,data,map_origin):
+ def _map_divide_store(self, width, height, data, map_origin, (X,Y)):
+  root=self.create_btree(data, width, height, map_origin, (X,Y))
+  self.load(root)
+  
+ #创建树 
+ def create_btree(self,data, width, height, map_origin, (X,Y)):
+  root={'map':[data, width, height, map_origin], 'WN': None, 'WS': None, 'EN': None, 'ES': None}
+  for i in data:
+   self.insert(root, i, width, height, map_origin, (X,Y))
+  return root
 
-  NWSE=''
+ #存入值
+ def insert(self, root, data, width, height, map_origin, (X,Y)):
+  pose_mean=Point()
+  pose_mean.x=(width/2)*self.map.info.resolution*X+map_origin.position.x
+  pose_mean.y=(height/2)*self.map.info.resolution*Y+map_origin.position.y
+  
+  linex_start=Point()
+  linex_end=Point()
+  liney_start=Point()
+  liney_end=Point()
+  
+  linex_start.x=pose_mean.x
+  linex_start.y=map_origin.position.y
+  linex_end.x=pose_mean.x
+  linex_end.y=map_origin.position.y+self.map.info.resolution*height*Y
+
+  liney_start.y=pose_mean.y
+  liney_start.x=map_origin.position.x
+  liney_end.y=pose_mean.y  
+  liney_end.x=map_origin.position.x+self.map.info.resolution*width*X
+  
+  if width<=10 or height<=10:
+   return
+   
+  else:
+   if :#WN 的条件
+    root['WN']!= None:
+    (X,Y)=(X,Y)
+    self.insert(root['WN'], data, width, height, map_origin, (X,Y))
+   else:
+    root['WN']={'map':[i, width, height, map_origin], 'WN': None, 'WS': None, 'EN': None, 'ES': None}
+   
+   if :#WS 的条件
+    root['WS']!= None:
+    (X,Y)=(X,-Y)
+    self.insert(root['WS'], data, width, height, map_origin, (X,Y))
+   else:
+    root['WS']={'map':[i, width, height, map_origin], 'WN': None, 'WS': None, 'EN': None, 'ES': None}
+   
+   if :#EN 的条件
+    root['EN']!= None:
+    (X,Y)=(-X,Y)
+    self.insert(root['EN'], data, width, height, map_origin, (X,Y))
+   else:
+    root['EN']={'map':[i, width, height, map_origin], 'WN': None, 'WS': None, 'EN': None, 'ES': None}
+   
+   if :#ES 的条件
+    root['ES']!= None:
+    (X,Y)=(-X,-Y)
+    self.insert(root['ES'], data, width, height, map_origin, (X,Y))
+   else:
+    root['ES']={'map':[i.append(i), width, height, map_origin], 'WN': None, 'WS': None, 'EN': None, 'ES': None}
+    
+   if i==pose_mean:#中心点的条件
+    return root['map']
+   
+ def load(self,root):
+  if root==None:
+   return
+  self.load( root['WN'] )
+  self.load( root['WS'] )
+  self.load( root['EN'] )
+  self.load( root['ES'] )
+ 
+ #查询值 
+ def read(self, root, i):
+  if :#WN 的条件
+   if root['WN']==None:
+    return None
+   else:
+   return self.read(root['WN'], i)
+   
+  elif :#WS 的条件
+   if root['WS']==None:
+    return None
+   else:
+   return self.read(root['WS'], i)
+   
+  elif :#EN 的条件
+   if root['EN']==None:
+    return None
+   else:
+   return self.read(root['EN'], i)
+   
+  elif :#ES 的条件
+   if root['ES']==None:
+    return None
+   else:
+   return self.read(root['ES'], i)
+  else:
+   return root['map']
+   
+   
+   
+#############################################################
+  """NWSE=''
   map_Subdict={}
   
   if len(key)==1: 
@@ -143,6 +250,7 @@ class laser_point():
    (X,Y)=(-X,-Y)
    if not (int(width)<=10 or int(height)<=10):
     self.geohash(key, map_dict, width, height, resolution, map_origin, X, Y)
+    """
 #############################################################
   
   

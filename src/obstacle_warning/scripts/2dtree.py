@@ -11,18 +11,19 @@ def create_btree( e ):
 def insert(root, i):  
  if i==root["a"]:  
   return  
+  
  if i<root["a"]:  
   if root["left"] != None:  
    insert(root["left"], i)  
   else:  
    root["left"] = {"a":i, "left":None, "right":None}  
+   
  if i>root["a"]:  
   if root["right"] != None:  
    insert(root["right"], i)  
   else:  
    root["right"] = {"a":i, "left":None, "right":None}  
- if i==root['a']:
-  print 'equal'
+
   
 def pre_order(root):  
  if root==None: 
