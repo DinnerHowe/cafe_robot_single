@@ -11,6 +11,11 @@
   
   <arg name="turtlebot_position_topic"          default="turtlebot_position_in_map" />
   
+  <arg name="detector_resolution"          default='50' />
+  
+  <arg name="detector_radius"          default='1.3' />
+  
+  <!--stopmove_edit.py-->  
   <node pkg="obstacle_warning" type="stopmove_edit.py" name="stopmove"  output="screen">
   
    <param name='stop_flag_topic'                value="$(arg stop_flag_topic)" />
@@ -25,7 +30,15 @@
    
   </node>
     
-  <node pkg="obstacle_warning" type="detect" name="multi_pioneer_laser_node"  output="screen">
+  <!--detector.py-->
+  <node pkg="obstacle_warning" type="detector.py" name="detector"  output="screen">
+  
+   <param name='detector_resolution'                value="$(arg detector_resolution)" />
+   
+   <param name='detector_radius'           value="$(arg detector_radius)" />
+   
+   <param name="stop_flag_topic"                 value="$(arg stop_flag_topic)" />
+
   </node>
 
 </launch>

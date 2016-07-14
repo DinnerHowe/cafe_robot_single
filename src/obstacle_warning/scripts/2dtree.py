@@ -3,56 +3,78 @@
 # python 二叉树  
       
 def create_btree( e ):  
- root = {"a":e[0], "left":None, "right":None}  
+ root = {"a":e, "left":None, "right":None}  
+ depth=0
  for i in e:  
-  insert(root, i)  
+  insert(root, i, depth)
  return root  
       
-def insert(root, i):  
- if i==root["a"]:  
-  return  
+def insert(root, i, depth):
+ depth+=1
+ if depth<3 :
+  if i==4:  
+   return
   
- if i<root["a"]:  
-  if root["left"] != None:  
-   insert(root["left"], i)  
-  else:  
-   root["left"] = {"a":i, "left":None, "right":None}  
+  if i<4:  
+   if root["left"] != None:  
+    insert(root["left"], i, depth)  
+   else:  
+    root["left"] = {"a":[], "left":None, "right":None}  
    
- if i>root["a"]:  
-  if root["right"] != None:  
-   insert(root["right"], i)  
-  else:  
-   root["right"] = {"a":i, "left":None, "right":None}  
-
+  if i>4:  
+   if root["right"] != None:  
+    insert(root["right"], i, depth)  
+   else:  
+    root["right"] = {"a":[], "left":None, "right":None}  
+ else:
+  pass
   
-def pre_order(root):  
- if root==None: 
-  return  
- pre_order( root["left"] )  
- pre_order( root["right"] )
- print   
- print 'tree: ',root 
+def loader(root, i):
+ if root["left"] == None and root['right']==None:  
+  root['a'].append(i) 
+ if root["left"] != None and root['right']==None:  
+  loader(root["left"], i)      
+ if root["left"] == None and root['right']!=None:  
+  loader(root["right"], i)     
+ if root["left"] != None and root['right']!=None:  
+  if i<4: 
+   loader(root["left"], i)  
+  if i>=4:
+   loader(root["right"], i)
+  
  
  
 def found(root, i):
- if i <root['a']:
+ if i <4:
   if root['left']==None:
-        return None
+   if i in root['a']:
+    return root['a']
+   else:
+    return None
   else:
-      return found(root['left'],i)
- elif i >root['a']:
+   return found(root['left'],i)  
+ elif i >=4:
   if root['right']==None:
-        return None
+   if i in root['a']:
+    return root['a']
+   else:
+    return None
   else:  
    return found(root['right'],i)
  else:
-  return root['a']
- 
+  print 'error'
+
+  
 if __name__ == '__main__':  
  l = [ 4,1,2,3, 2, -1, 5, 8 ] 
- root =create_btree(l) 
- pre_order(root) 
- print found(root,-10) 
+ root =create_btree(l)
+   
+ for i in l:
+  loader(root, i)
+  
+ number=4
+ print 'tree: ',root 
+ print '%s is in list'%number, found(root,number) 
 
 
  

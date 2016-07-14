@@ -30,9 +30,9 @@ class stopmove():
    self.stop_count=0
   else:
    self.stop_count+=1
-  print data.data, self.stop_count
+  #print data.data, self.stop_count
   if self.info=="stop" and self.stop_count>5:
-   self.stopmove()
+   self.stopmoveit()
    self.addFlag()
   else:
    pass
@@ -81,6 +81,8 @@ class stopmove():
   self.pubStopMess = rospy.Publisher('%s'%self.StopMess_topic, Twist, queue_size=1)
   self.stop_base = actionlib.SimpleActionClient("%s"%self.action_topic, MoveBaseAction)
   self.stop_server= actionlib.SimpleActionServer('%s'%self.action_topic, MoveBaseAction, False)
+  self.recieve_pub=rospy.Publisher("detector_recieved", String ,queue_size=1)
+  
   
   #details 
   self.marker.type = Marker.TEXT_VIEW_FACING
@@ -94,19 +96,20 @@ class stopmove():
   self.pose = rospy.wait_for_message("%s"%self.turtlebot_position_topic, Pose)
   self.marker.pose = self.pose
   self.marker.pose.position.z= self.pose.position.z +0.5
-  self.marker.scale.x, marker.scale.y, marker.scale.z = 0.01, 0.01, 0.2
+  self.marker.scale.x, self.marker.scale.y, self.marker.scale.z = 0.01, 0.01, 0.2
   self.marker.lifetime = rospy.Duration(0.5)
   self.marker_pub.publish(self.marker)
 
 
- def stopmove(self):   
+ def stopmoveit(self):   
+  self.recieve_pub.publish('recieved')
   rospy.loginfo("cancelling goal") 
   if self.stop_server.is_active():
    self.stop_server.set_aborted()
    self.stop_base.cancle_goal()
   else:
    pass
-  self.pubStopMess.publish(twist)
+  self.pubStopMess.publish(self.stop)
 
 if __name__ == '__main__':
  try:

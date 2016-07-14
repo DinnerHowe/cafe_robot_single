@@ -8,7 +8,7 @@ This programm is tested on kuboki base turtlebot.
 """
 import rospy,numpy,PyKDL,maplib
 from sensor_msgs.msg import LaserScan
-from std_msgs.msg import String,ColorRGBA
+from std_msgs.msg import String,ColorRGBA,Time
 from geometry_msgs.msg import Point,Pose
 from nav_msgs.msg import Odometry,OccupancyGrid
 from visualization_msgs.msg import Marker
@@ -20,97 +20,154 @@ class laser_point():
   self.map=OccupancyGrid()
   self.coor=[]
   self.static_area=[]
-  self.points_marker=Marker()
+  #self.points_marker=Marker()
   self.cut_points=[]#中分线的上下左右终点
   self.centre_points=[]
+  self.feedback=''
+  #self.now=Time()
+  
+  if not rospy.has_param('~detector_resolution'):
+   rospy.set_param('~detector_resolution',20)
+  self.mim_space = rospy.get_param('~detector_resolution')
+  
+  if not rospy.has_param('~detector_radius'):
+   rospy.set_param('~detector_radius',1.3)
+  self.radius = rospy.get_param('~detector_radius')
   
   if not rospy.has_param('~stop_flag_topic'):
    rospy.set_param('~stop_flag_topic','/stop_flag')
   self.stop_flag_topic = rospy.get_param('~stop_flag_topic')
 
+  
   self.stop_flag=rospy.Publisher("%s"%self.stop_flag_topic, String ,queue_size=1)
   self.marker_pub=rospy.Publisher("detector_marker", Marker ,queue_size=1)
+  
+  self.radiu=self.map.info.resolution*self.radius
   
  def __init__(self):
   self.define()
   self.map_data()
   rospy.Subscriber('/scan', LaserScan, self.laser_cb)
+  #rospy.Subscriber('/odom', Odometry, self.odom_cb)
+  rospy.Subscriber('detector_recieved', String, self.feedback_cb)
   rospy.Subscriber('turtlebot_position_in_map',Pose,self.pose_cb)
-  rospy.Subscriber('/odom', Odometry, self.odom_pose_cb)
   rospy.spin()
 
  def map_data(self):
   self.map=rospy.wait_for_message('map',OccupancyGrid)
+  
   self.statice_area()
-  
- def statice_area(self):
-  self.static_area=maplib.get_effective_point(self.map)[1]
-  self.points_marker=self.visual_test(self.static_area,Marker.POINTS)
-  #self.static_area=[point1,point2,point3...]
-  
+   
   #geohash算法区域划分
   width=self.map.info.width
   height=self.map.info.height
   map_origin=self.map.info.origin
-  
   self.geohash(self.static_area, width, height, map_origin)
+
+  #self.visual_markers()####################visual_test
+  
+ def statice_area(self):
+  self.static_area=maplib.get_effective_point(self.map)[1]
+
+  #self.static_area_makers()####################visual_test  
+    
+ def visual_markers(self):
+  color=ColorRGBA()
+  scale=Point()
+  scale.x=0.05
+  scale.y=0.05
+  color.r=0.0
+  color.g=1.0
+  color.b=0.0
+  color.a=0.5
+  self.line_marker=self.visual_test(self.cut_points, Marker.LINE_LIST, color, scale)#标记出区域划分（testing）
+  
+  color=ColorRGBA()
+  scale=Point()
+  scale.x=0.1
+  scale.y=0.1
+  color.r=0.0
+  color.g=0.0
+  color.b=1.0
+  color.a=1.0
+  self.centre_points_marker=self.visual_test(self.centre_points,Marker.POINTS, color, scale)
+  
+ def static_area_makers(self):
+  color=ColorRGBA()
+  scale=Point()
+  scale.x=0.05
+  scale.y=0.05
+  color.r=1.0
+  color.g=1.0
+  color.b=0.0
+  color.a=1.0
+  
+  self.points_marker=self.visual_test(self.static_area,Marker.POINTS, color, scale)
+  #self.static_area=[point1,point2,point3...]
+ 
+ def LaserDataMarker(self,LaserData): ####################visual_test
+  color=ColorRGBA()
+  scale=Point()
+  scale.x=0.04
+  scale.y=0.04
+  color.r=0.0
+  color.g=2.0
+  color.b=0.0
+  color.a=1.0
+  
+  self.laser_points_marker=self.visual_test(LaserData, Marker.POINTS, color, scale)
+  
  
  #地图区域划分 
  def geohash(self, data, width, height, map_origin):
-  #获取中心点坐标(testing _map_divide_store开发完了删掉)
-  line=[]
-  linex_start=Point()
-  linex_end=Point()
-  liney_start=Point()
-  liney_end=Point()
-  
   (X,Y)=(1,1)
-  
   pose_mean=Point()
   pose_mean.x=(width/2)*self.map.info.resolution*X+map_origin.position.x
   pose_mean.y=(height/2)*self.map.info.resolution*Y+map_origin.position.y
-  
-  linex_start.x=pose_mean.x
-  linex_start.y=map_origin.position.y
-  linex_end.x=pose_mean.x
-  linex_end.y=map_origin.position.y+self.map.info.resolution*height*Y
-
-  liney_start.y=pose_mean.y
-  liney_start.x=map_origin.position.x
-  liney_end.y=pose_mean.y  
-  liney_end.x=map_origin.position.x+self.map.info.resolution*width*X
-  
-  line=[linex_start,linex_end,liney_start,liney_end]
-
-  self.cut_points.append(linex_start,linex_end,liney_start,liney_end)
-  
-  self.line_marker=self.visual_test(line,Marker.LINE_LIST)#标记出第一层区域划分（testing）
-  
-################################################################
+   
+  self._map_divide_store(width, height, data, map_origin.position, pose_mean, (X,Y))
  
-  self._map_divide_store(width, height, data, map_origin, (X,Y))
-  
-  
-  
-  
-################################################################
+ ###########################################
+  #testing 
+  #test_point=Point()
+  #test_point.x=-1.15
+  #test_point.y=5.20
+  #test_data=[test_point]
+  #self._map_divide_store(width, height, test_data, map_origin.position, pose_mean, (X,Y))
+ ############################################
+ 
+ 
  #地图划分区域存储 
- def _map_divide_store(self, width, height, data, map_origin, (X,Y)):
-  root=self.create_btree(data, width, height, map_origin, (X,Y))
-  self.load(root)
+ def _map_divide_store(self, width, height, data, map_origin, pose_mean, (X,Y)):
+ 
+  root=self.create_btree(data, width, height, map_origin, pose_mean, (X,Y))
+
+  rospy.loginfo( 'start loading tree' )
+  for i in data:
+   self.load(root, i)
+   
+  self.root=root
+  
+  #for k in root['EN']['EN']['EN'].keys():
+   #if k=='map':
+    #print k,len(root['EN']['EN']['EN'][k])
+
+  #print root['EN']['EN']['EN']['EN']['map']
   
  #创建树 
- def create_btree(self,data, width, height, map_origin, (X,Y)):
-  root={'map':[data, width, height, map_origin], 'WN': None, 'WS': None, 'EN': None, 'ES': None}
+ def create_btree(self,data, width, height, map_origin, pose_mean, (X,Y)):
+  root={'map':[data], 'width': width, 'height': height, 'map_origin': map_origin, 'pose_mean': pose_mean, 'WN': None, 'WS': None, 'EN': None, 'ES': None}
+  rospy.loginfo( 'start building tree' )
   for i in data:
    self.insert(root, i, width, height, map_origin, (X,Y))
   return root
 
  #存入值
  def insert(self, root, data, width, height, map_origin, (X,Y)):
+
   pose_mean=Point()
-  pose_mean.x=(width/2)*self.map.info.resolution*X+map_origin.position.x
-  pose_mean.y=(height/2)*self.map.info.resolution*Y+map_origin.position.y
+  pose_mean.x=abs((width/2)*self.map.info.resolution)*X+map_origin.x
+  pose_mean.y=abs((height/2)*self.map.info.resolution)*Y+map_origin.y
   
   linex_start=Point()
   linex_end=Point()
@@ -118,193 +175,358 @@ class laser_point():
   liney_end=Point()
   
   linex_start.x=pose_mean.x
-  linex_start.y=map_origin.position.y
+  linex_start.y=map_origin.y
   linex_end.x=pose_mean.x
-  linex_end.y=map_origin.position.y+self.map.info.resolution*height*Y
+  linex_end.y=map_origin.y+self.map.info.resolution*height*Y
 
   liney_start.y=pose_mean.y
-  liney_start.x=map_origin.position.x
+  liney_start.x=map_origin.x
   liney_end.y=pose_mean.y  
-  liney_end.x=map_origin.position.x+self.map.info.resolution*width*X
+  liney_end.x=map_origin.x+self.map.info.resolution*width*X
   
-  if width<=10 or height<=10:
-   return
+  line=[linex_start,linex_end,liney_start,liney_end]
+  self.cut_points+=line
+  self.centre_points.append(pose_mean)
+  
+  #print (X,Y),pose_mean.x,pose_mean.y,' data:',data.x,data.y
+  
+   
+  if width<=self.mim_space or height<=self.mim_space:
+   pass
    
   else:
-   if :#WN 的条件
-    root['WN']!= None:
-    (X,Y)=(X,Y)
-    self.insert(root['WN'], data, width, height, map_origin, (X,Y))
-   else:
-    root['WN']={'map':[i, width, height, map_origin], 'WN': None, 'WS': None, 'EN': None, 'ES': None}
-   
-   if :#WS 的条件
-    root['WS']!= None:
-    (X,Y)=(X,-Y)
-    self.insert(root['WS'], data, width, height, map_origin, (X,Y))
-   else:
-    root['WS']={'map':[i, width, height, map_origin], 'WN': None, 'WS': None, 'EN': None, 'ES': None}
-   
-   if :#EN 的条件
-    root['EN']!= None:
-    (X,Y)=(-X,Y)
-    self.insert(root['EN'], data, width, height, map_origin, (X,Y))
-   else:
-    root['EN']={'map':[i, width, height, map_origin], 'WN': None, 'WS': None, 'EN': None, 'ES': None}
-   
-   if :#ES 的条件
-    root['ES']!= None:
-    (X,Y)=(-X,-Y)
-    self.insert(root['ES'], data, width, height, map_origin, (X,Y))
-   else:
-    root['ES']={'map':[i.append(i), width, height, map_origin], 'WN': None, 'WS': None, 'EN': None, 'ES': None}
+   #print 'width, height: ', width, height
+   if data.x>=pose_mean.x and data.y>=pose_mean.y:#EN 的条件
+    if root['EN'] != None:
+     pass
+    elif root['EN']==None:
+     root['EN']={'map':[], 'width': width, 'height': height, 'map_origin': map_origin, 'pose_mean': pose_mean, 'WN': None, 'WS': None, 'EN': None, 'ES': None}
+    else:
+     rospy.loginfo( 'create tree EN errro' )
+    (X,Y)=(1,1)
+    width/=2
+    height/=2
+    self.insert(root['EN'], data, width, height, pose_mean, (X,Y))
+     
+   elif data.x>=pose_mean.x and data.y<pose_mean.y:#ES 的条件
+    if root['ES']!= None:
+     pass
+    elif root['ES']==None:
+     root['ES']={'map':[], 'width': width, 'height': height, 'map_origin': map_origin, 'pose_mean': pose_mean, 'WN': None, 'WS': None, 'EN': None, 'ES': None}
+    else:
+     rospy.loginfo( 'create tree ES errro' )
+    (X,Y)=(1,-1)
+    width/=2
+    height/=2
+    self.insert(root['ES'], data, width, height, pose_mean, (X,Y))
     
-   if i==pose_mean:#中心点的条件
-    return root['map']
+   elif data.x<pose_mean.x and data.y>=pose_mean.y:#WN 的条件
+    if root['WN']!= None:
+     pass
+    elif root['WN']==None:
+     root['WN']={'map':[], 'width': width, 'height': height, 'map_origin': map_origin, 'pose_mean': pose_mean, 'WN': None, 'WS': None, 'EN': None, 'ES': None}
+    else:
+     rospy.loginfo( 'create tree WN errro' )
+    (X,Y)=(-1,1)
+    width/=2
+    height/=2
+    self.insert(root['WN'], data, width, height, pose_mean, (X,Y))
+
+   elif data.x<pose_mean.x and data.y<pose_mean.y:#WS 的条件
+    if root['WS']!= None:
+     pass
+    elif root['WS']==None:
+     root['WS']={'map':[], 'width': width, 'height': height, 'map_origin': map_origin, 'pose_mean': pose_mean, 'WN': None, 'WS': None, 'EN': None, 'ES': None}
+    else:
+     rospy.loginfo( 'create tree WS errro' )
+    (X,Y)=(-1,-1)
+    width/=2
+    height/=2
+    self.insert(root['WS'], data, width, height, pose_mean, (X,Y))
+    
+   else:
+    rospy.loginfo( 'error during building tree' )
+
+ def load(self,root,i):
+  if root['EN']==None and root['ES']==None and root['WN']==None and root['WS']==None:
+  #LEAF
+   root['map'].append(i)
+
+#1   
+  if root['EN']!=None and root['ES']==None and root['WN']==None and root['WS']==None:
+  # EN
+   self.load(root['EN'],i)
    
- def load(self,root):
-  if root==None:
-   return
-  self.load( root['WN'] )
-  self.load( root['WS'] )
-  self.load( root['EN'] )
-  self.load( root['ES'] )
- 
+  if root['EN']==None and root['ES']!=None and root['WN']==None and root['WS']==None:
+  # ES
+   self.load(root['ES'],i)
+   
+  if root['EN']==None and root['ES']==None and root['WN']!=None and root['WS']==None:
+  #WN
+   self.load(root['WN'],i)
+   
+  if root['EN']==None and root['ES']==None and root['WN']==None and root['WS']!=None:
+  #WS
+   self.load(root['WS'],i)
+
+#2
+  if root['EN']!=None and root['ES']!=None and root['WN']==None and root['WS']==None:
+   #EN ES
+   if root['pose_mean'].x<=i.x:
+    if root['pose_mean'].y>i.y:
+     self.load(root['ES'],i)
+    elif root['pose_mean'].y<=i.y:
+     self.load(root['EN'],i)
+    else:
+     rospy.loginfo('EN ES1 error point not in position')
+
+       
+  if root['EN']!=None and root['ES']==None and root['WN']!=None and root['WS']==None:
+  # EN WN
+   if root['pose_mean'].y<=i.y:
+    if root['pose_mean'].x<=i.x:
+     self.load(root['EN'],i)
+    elif root['pose_mean'].x>i.x:
+     self.load(root['WN'],i)
+    else:
+     rospy.loginfo('EN WN1 error point not in position')
+
+       
+  if root['EN']!=None and root['ES']==None and root['WN']==None and root['WS']!=None:
+  # EN WS
+   if root['pose_mean'].x<=i.x and root['pose_mean'].y<i.y:
+    self.load(root['EN'],i)
+   elif root['pose_mean'].x>i.x and root['pose_mean'].y>i.y:
+    self.load(root['WS'],i)
+   else:
+    rospy.loginfo('EN WS error point not in position')
+  
+  if root['EN']==None and root['ES']!=None and root['WN']!=None and root['WS']==None:
+  # ES WN
+   if root['pose_mean'].x<=i.x and root['pose_mean'].y>i.y:
+    self.load(root['ES'],i)
+   elif root['pose_mean'].x>i.x and root['pose_mean'].y<=i.y:
+    self.load(root['WN'],i)
+   else:
+    rospy.loginfo('ES WN error point not in position')
+   
+  if root['EN']==None and root['ES']!=None and root['WN']==None and root['WS']!=None:
+  # ES WS
+   if root['pose_mean'].y>i.y:
+    if root['pose_mean'].x>i.x:
+     self.load(root['WS'],i)
+    elif root['pose_mean'].x<=i.x:
+     self.load(root['ES'],i)
+    else:
+     rospy.loginfo('ES WS1 error point not in position')
+
+         
+  if root['EN']==None and root['ES']==None and root['WN']!=None and root['WS']!=None:
+  # WN WS
+   if root['pose_mean'].x>=i.x:
+    if root['pose_mean'].y<=i.y:
+     self.load(root['WN'],i)
+    elif root['pose_mean'].y>i.y:
+     self.load(root['WS'],i)
+    else:
+     rospy.loginfo('WN WS1 error point not in position')
+
+   
+#3
+  if root['EN']!=None and root['ES']!=None and root['WN']!=None and root['WS']==None:
+  #EN ES WN
+   if i.x>=root['pose_mean'].x and i.y>=root['pose_mean'].y:#EN 的条件
+    self.load(root['EN'],i)
+    
+   elif i.x>=root['pose_mean'].x and i.y<root['pose_mean'].y:#ES 的条件
+    self.load(root['ES'],i)
+    
+   elif i.x<root['pose_mean'].x and i.y>=root['pose_mean'].y:#WN 的条件
+    self.load(root['WN'],i)
+    
+   else:
+    #rospy.loginfo('EN ES WN error point not in position')
+    return None
+    
+  if root['EN']!=None and root['ES']!=None and root['WN']==None and root['WS']!=None:
+  # EN ES WS
+   if i.x>=root['pose_mean'].x and i.y>=root['pose_mean'].y:#EN 的条件
+    self.load(root['EN'],i)
+    
+   elif i.x>=root['pose_mean'].x and i.y<root['pose_mean'].y:#ES 的条件
+    self.load(root['ES'],i)
+    
+   elif i.x<root['pose_mean'].x and i.y<root['pose_mean'].y:#WS 的条件
+    self.load(root['ES'],i)
+    
+   else:
+    #rospy.loginfo('EN ES WS error point not in position')
+    return None
+
+  if root['EN']!=None and root['ES']==None and root['WN']!=None and root['WS']!=None:
+  # EN WN WS
+   if i.x>=root['pose_mean'].x and i.y>=root['pose_mean'].y:#EN 的条件
+    self.load(root['EN'],i)
+    
+   elif i.x<root['pose_mean'].x and i.y>=root['pose_mean'].y:#WN 的条件
+    self.load(root['WN'],i)
+    
+   elif i.x<root['pose_mean'].x and i.y<root['pose_mean'].y:#WS 的条件
+    self.load(root['WS'],i)
+    
+   else:
+    #rospy.loginfo('EN WN WS error point not in position')
+    return None
+    
+  if root['EN']==None and root['ES']!=None and root['WN']!=None and root['WS']!=None:
+  # ES WN WS
+   if i.x>=root['pose_mean'].x and i.y<root['pose_mean'].y:#ES 的条件
+    self.load(root['ES'],i)
+    
+   elif i.x<root['pose_mean'].x and i.y>=root['pose_mean'].y:#WN 的条件
+    self.load(root['WN'],i)
+    
+   elif i.x<root['pose_mean'].x and i.y<root['pose_mean'].y:#WS 的条件
+    self.load(root['WS'],i)
+    
+   else:
+    #rospy.loginfo('ES WN WS error point not in position')
+    return
+#4  
+  if root['EN']!=None and root['ES']!=None and root['WN']!=None and root['WS']!=None:
+   # EN ES WN WS
+   if i.x>=root['pose_mean'].x and i.y>=root['pose_mean'].y:#EN 的条件
+    self.load(root['EN'],i)
+    
+   elif i.x>=root['pose_mean'].x and i.y<root['pose_mean'].y:#ES 的条件
+    self.load(root['ES'],i)
+    
+   elif i.x<root['pose_mean'].x and i.y>=root['pose_mean'].y:#WN 的条件
+    self.load(root['WN'],i)
+    
+   elif i.x<root['pose_mean'].x and i.y<root['pose_mean'].y:#WS 的条件
+    self.load(root['WS'],i)
+   
+   else:
+    rospy.loginfo('EN ES WN WS error point not in position')
+    return    
+     
  #查询值 
  def read(self, root, i):
-  if :#WN 的条件
+  if i.x<root['pose_mean'].x and i.y>=root['pose_mean'].y:#WN 的条件
    if root['WN']==None:
-    return None
+    for j in root['map']:
+     if (abs(round(i.x,3)-round(j.x,3)),abs(round(i.y,3)-round(j.y,3)))<(self.radiu,self.radiu):
+      #print abs(round(i.x,3)-round(j.x,3),round(i.y,3)-round(j.y,3))
+      return True
    else:
-   return self.read(root['WN'], i)
+    return self.read(root['WN'], i)
    
-  elif :#WS 的条件
+  elif i.x<root['pose_mean'].x and i.y<root['pose_mean'].y:#WS 的条件
    if root['WS']==None:
-    return None
+    for j in root['map']:
+     if (abs(round(i.x,3)-round(j.x,3)),abs(round(i.y,3)-round(j.y,3)))<(self.radiu,self.radiu):
+      #print (abs(round(i.x,3)-round(j.x,3)),abs(round(i.y,3)-round(j.y,3)))
+      return True
    else:
-   return self.read(root['WS'], i)
+    return self.read(root['WS'], i)
    
-  elif :#EN 的条件
+  elif i.x>=root['pose_mean'].x and i.y>=root['pose_mean'].y:#EN 的条件
    if root['EN']==None:
-    return None
+    for j in root['map']:
+     if (abs(round(i.x,3)-round(j.x,3)),abs(round(i.y,3)-round(j.y,3)))<(self.radiu,self.radiu):
+      #print (abs(round(i.x,3)-round(j.x,3)),abs(round(i.y,3)-round(j.y,3)))
+      return True
    else:
-   return self.read(root['EN'], i)
+    return self.read(root['EN'], i)
    
-  elif :#ES 的条件
+  elif i.x>=root['pose_mean'].x and i.y<root['pose_mean'].y:#ES 的条件
    if root['ES']==None:
-    return None
+    for j in root['map']:
+     if (abs(round(i.x,3)-round(j.x,3)),abs(round(i.y,3)-round(j.y,3)))<(self.radiu,self.radiu):
+      #print (abs(round(i.x,3)-round(j.x,3)),abs(round(i.y,3)-round(j.y,3)))
+      return True
    else:
-   return self.read(root['ES'], i)
+    return self.read(root['ES'], i)
+   
   else:
-   return root['map']
-   
-   
-   
-#############################################################
-  """NWSE=''
-  map_Subdict={}
+   rospy.loginfo('查询值  error point not in position')
   
-  if len(key)==1: 
-   static_area=map_dict['%s'%key[0]]
-  else:
-   for i in range(len(key)):
-    if type(map_dict['%s'%key[i]]) is dict:
-     pass
-    ###怎么调下一级的字典defaultdict方法
-    
-    
-  static_Subarea={'WN':[],'EN':[],'WS':[],'ES':[]}
-
-  for point in static_area:
-   # divide to 4 parts
-   if linex_start.x<=point.x<pose_mean.x:
-    NWSE+='E'
-   elif pose_mean.x<=point.x<linex_end.x:
-    NWSE+='W'
-   else:
-    rospy.loginfo('point x coordinate is out of range')
-    
-   if linex_start.y<=point.y<pose_mean.y:
-    NWSE+='S'
-   elif pose_mean.y<=point.y<linex_end.y:
-    NWSE+='N'
-   else:
-    rospy.loginfo('point y coordinate is out of range')
-   # classify points into it's area
-   static_Subarea['%s'%NWSE].append(point)  #计算static_Subarea
-
-  map_dict['%s'%key]=static_Subarea  
-  if NWSE=='WN':
-   (X,Y)=(X,Y)
-   if not (int(width)<=10 or int(height)<=10):
-    self.geohash(key, map_dict, width, height, resolution, map_origin, X, Y)
-  if NWSE=='EN':
-   (X,Y)=(-X,Y)
-   if not (int(width)<=10 or int(height)<=10):
-    self.geohash(key, map_dict, width, height, resolution, map_origin, X, Y)
-  if NWSE=='WS':
-   (X,Y)=(X,-Y)
-   if not (int(width)<=10 or int(height)<=10):
-    self.geohash(key, map_dict, width, height, resolution, map_origin, X, Y)
-  if NWSE=='ES':
-   (X,Y)=(-X,-Y)
-   if not (int(width)<=10 or int(height)<=10):
-    self.geohash(key, map_dict, width, height, resolution, map_origin, X, Y)
-    """
-#############################################################
-  
-  
- def odom_pose_cb(self, data):
-  self.oriation_angle=self.Q2A([data.pose.pose.orientation.x,data.pose.pose.orientation.y,data.pose.pose.orientation.z,data.pose.pose.orientation.w])
-  self.orientation=data.pose.pose.orientation
-  #print self.marker.pose.orientation
-  self.marker_pub.publish(self.points_marker) #marker out all static area
-  self.marker_pub.publish(self.line_marker) #marker out divie line
-    
  def pose_cb(self,data):
   self.pose=data
+  self.oriation_angle=self.Q2A([data.orientation.x,data.orientation.y,data.orientation.z,data.orientation.w])
+  #发布visual_test的结果
+  try:
+   #self.marker_pub.publish(self.points_marker) #marker out all static area
+   #self.marker_pub.publish(self.line_marker) #marker out divie line
+   #self.marker_pub.publish(self.centre_points_marker)
+   self.marker_pub.publish(self.laser_points_marker)####################visual_test
+  except:
+   pass
+     
+ #def odom_cb(self,data):
+   #pass
+   
+ def feedback_cb(self,data):
+  self.feedback=data.data
+
   
  def laser_cb(self,data):
-  angle_min=data.angle_min
-  angle_max=data.angle_max
-  angle_inc=data.angle_increment
-  
-  point=Point()
+  self.now=rospy.get_rostime()
+  if self.feedback=='recieved':
+   self.feedback=''
+   #rospy.loginfo('sleeping')
+   rospy.sleep(0.5)
+  if data.header.stamp.secs==self.now.secs:
+   LaserData=[]
+   count=0
+   for i in data.ranges:
+    #print 'get total points:', count
+    if 0.0<i<0.8:
+     if data.angle_min+data.angle_increment*count<=data.angle_max+data.angle_increment: 
+      point=Point()
+      angle=data.angle_min+data.angle_increment*count+self.oriation_angle
+      point.x=i*numpy.cos(angle)+self.pose.position.x-0.1
+      point.y=i*numpy.sin(angle)+self.pose.position.y+0.05
+      #print 'i:', i, type(point.x), point.x ,type(numpy.nan) ,point.x==numpy.nan
+      LaserData.append(point)
+     else:
+      rospy.loginfo( 'out of range' )
+    else:
+     pass
+    count+=1
+   
+   if self.check(LaserData): #判断是否在误差许可之内为地图上已知点
+    #print True
+    self.stop_flag.publish('stop')
+   else:
+    #print False
+    pass
+   
+   #self.LaserDataMarker(LaserData)####################visual_test
 
-  LaserData=[]
-  count=0
-  for i in data.ranges:
-   #print 'get total points:', count
-   if i < 0.7:
-    if angle_min+angle_inc*count<angle_max: 
-     #print 'get point'
-     (point.y,point.x)=(i*numpy.sin(self.oriation_angle+angle_min+angle_inc*count), i*numpy.cos(self.oriation_angle+angle_min+angle_inc*count))
-     #if self.check(point): #判断是否在误差许可之内
-      #self.stop_flag.publish('stop')
-   count+=1
-  #print 'pub marker'
-  
-######################################################  
 #检查镭射是否为地图上的静态障碍物（eg，wall door etc.）
- #def check(self,data):
-  #CheckPoint=data.x/2
-  #n=2
-  #for i in range(n):
-   #for StaticPoint in self.static_area:
-    #if (data.x+0.1*i) - StaticPoint:
-     #if (data.y+0.1*i) - self.static_area:
-     
-     ####
-     
-     
-     
-##################################################   
+ def check(self,data):
+  trigger=0
+  if len(data)<10:
+   pass
+  else:
+   #print 'data length',len(data)
+   for i in data:
+    result=self.read(self.root,i)
+    #print result,i.x,i.y
+    if not result:
+     trigger+=1
+     #print trigger
+  if trigger>=8:
+   return True
+  else:
+   return False
 
 # 视觉显示检测结果
- def visual_test(self,data,Type):#data=[point1,point2,point3...]
+ def visual_test(self,data,Type,color,scale):#data=[point1,point2,point3...]###################visual_test
 #plot POINTS
   #print len(data),data[0],data[1]
-  color=ColorRGBA()
   if Type==Marker.POINTS:
    #print 'pub POINTS Marker'
    point_marker=Marker()
@@ -315,51 +537,38 @@ class laser_point():
    
    point_marker.id=0
    point_marker.type=Type
-   point_marker.scale.x=0.05
-   point_marker.scale.y=0.05
-   
-   color.r=1.0
-   color.g=1.0
-   color.b=0.0
-   color.a=1.0
+   point_marker.scale.x=scale.x#0.1
+   point_marker.scale.y=scale.y#0.1
    
    point_marker.points=data
    for i in data:
     point_marker.colors.append(color)
 
-   point_marker.lifetime=rospy.Duration(0.5)
+   point_marker.lifetime=rospy.Duration(0.2)
    
    return point_marker
    
 #plot LINE_LIST  
   if Type==Marker.LINE_LIST:
-   print 'pub LINE_LIST Marker'
+   #print 'pub LINE_LIST Marker'
    line_marker=Marker()
    line_marker.header.frame_id='/map'
    line_marker.header.stamp=rospy.Time.now()
    line_marker.ns='detector_visual_test'
    line_marker.action=Marker.ADD
-   #line_marker.pose.orientation=self.orientation
    
    line_marker.id=1
    line_marker.type=Type
-   line_marker.scale.x=0.05
-   line_marker.scale.y=0.05  
-
-   color.r=0.0
-   color.g=1.0
-   color.b=0.0
-   color.a=1.0
+   line_marker.scale.x=scale.x#0.05
+   line_marker.scale.y=scale.y#0.05  
    
    line_marker.points=data
    for i in data:
     line_marker.colors.append(color)
 
-   line_marker.lifetime=rospy.Duration(0.1)
+   line_marker.lifetime=rospy.Duration(0.5)
    
    return line_marker
-   
-######################################################   
 
 
  def Q2A(self,quat):
@@ -368,7 +577,7 @@ class laser_point():
   
   
 if __name__ == '__main__':
- rospy.init_node("laser_point", anonymous=True)
+ rospy.init_node("detector", anonymous=True)
  try:
   rospy.loginfo ("initialization system")
   laser_point()

@@ -107,9 +107,9 @@ class camera_image():
    #self.clear_finish=True
    self.clear=0
    os.system('rosnode kill /camera_image')
-   os.system('rosnode kill /stopmove')
-   os.system('rosnode kill /pioneer_laser_node')
-   print 'rosnode kill /camera_image'
+   #os.system('rosnode kill /stopmove')
+   #os.system('rosnode kill /pioneer_laser_node')
+   rospy.loginfo( 'rosnode kill /camera_image' )
   else:
    pass
 
