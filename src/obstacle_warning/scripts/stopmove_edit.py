@@ -104,11 +104,11 @@ class stopmove():
  def stopmoveit(self):   
   self.recieve_pub.publish('recieved')
   rospy.loginfo("cancelling goal") 
-  if self.stop_server.is_active():
-   self.stop_server.set_aborted()
-   self.stop_base.cancle_goal()
-  else:
-   pass
+  #if self.stop_server.is_active():
+   #self.stop_server.set_aborted()
+   #self.stop_base.cancle_goal()
+  #else:
+   #pass
   self.pubStopMess.publish(self.stop)
 
 if __name__ == '__main__':

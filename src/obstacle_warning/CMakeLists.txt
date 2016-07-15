@@ -21,6 +21,6 @@ include_directories(
 
 
 
-add_executable(detect src/detect.cpp)
-target_link_libraries(detect ${catkin_LIBRARIES})
-add_dependencies(detect obstacle_detect_generate_messages_cpp)
+#add_executable(detect src/detect.cpp)
+#target_link_libraries(detect ${catkin_LIBRARIES})
+#add_dependencies(detect obstacle_detect_generate_messages_cpp)

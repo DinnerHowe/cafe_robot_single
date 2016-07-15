@@ -6,12 +6,13 @@ Copyright (c) 2015 Xu Zhihao (Howe).  All rights reserved.
 This program is free software; you can redistribute it and/or modify
 This programm is tested on kuboki base turtlebot. 
 """
-import rospy,numpy,PyKDL,maplib
+import rospy,numpy,PyKDL,maplib,actionlib
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import String,ColorRGBA,Time
-from geometry_msgs.msg import Point,Pose
+from geometry_msgs.msg import Point,Pose,Twist,PointStamped
 from nav_msgs.msg import Odometry,OccupancyGrid
 from visualization_msgs.msg import Marker
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 class laser_point():
  def define(self):
@@ -24,32 +25,54 @@ class laser_point():
   self.cut_points=[]#中分线的上下左右终点
   self.centre_points=[]
   self.feedback=''
-  #self.now=Time()
+
+  self.stop_count=0  
+  self.info=''
+  self.stop=Twist()
+  self.new_goal=PointStamped()
   
-  if not rospy.has_param('~detector_resolution'):
-   rospy.set_param('~detector_resolution',20)
-  self.mim_space = rospy.get_param('~detector_resolution')
+  if not rospy.has_param('~warning_marker_topic'):
+   rospy.set_param('~warning_marker_topic','/warning_marker')
+  self.warning_marker_topic = rospy.get_param('~warning_marker_topic')
   
-  if not rospy.has_param('~detector_radius'):
-   rospy.set_param('~detector_radius',0.2)
-  self.radius = rospy.get_param('~detector_radius')
+  if not rospy.has_param('~StopMoving_topic'):
+   rospy.set_param('~StopMoving_topic','/cmd_vel_mux/input/teleop')
+  self.StopMess_topic=rospy.get_param('~StopMoving_topic')
+  
+  if not rospy.has_param('~action_topic'):
+   rospy.set_param('~action_topic','move_base')
+  self.action_topic=rospy.get_param('~action_topic')
   
   if not rospy.has_param('~stop_flag_topic'):
    rospy.set_param('~stop_flag_topic','/stop_flag')
   self.stop_flag_topic = rospy.get_param('~stop_flag_topic')
 
+  if not rospy.has_param('~detector_resolution'):
+   rospy.set_param('~detector_resolution',20)
+  self.mim_space = rospy.get_param('~detector_resolution')
   
-  self.stop_flag=rospy.Publisher("%s"%self.stop_flag_topic, String ,queue_size=1)
+  if not rospy.has_param('~detector_radius'):
+   rospy.set_param('~detector_radius',0.35)
+  self.radius = rospy.get_param('~detector_radius')
+
+  #functions
+  self.pubStopMess = rospy.Publisher('%s'%self.StopMess_topic, Twist, queue_size=1)
+  self.stop_base = actionlib.SimpleActionClient("%s"%self.action_topic, MoveBaseAction)
+  self.stop_server= actionlib.SimpleActionServer('%s'%self.action_topic, MoveBaseAction, False)
+  
+  rospy.loginfo("waiting fro move_base action server")
+  self.stop_base.wait_for_server(rospy.Duration(60))
+  
   self.marker_pub=rospy.Publisher("detector_marker", Marker ,queue_size=1)
-  
+  self.stop_flag=rospy.Publisher("%s"%self.stop_flag_topic, String ,queue_size=1)
   print 'radiu',self.radius
   
  def __init__(self):
   self.define()
   self.map_data()
   rospy.Subscriber('/scan', LaserScan, self.laser_cb)
-  rospy.Subscriber('detector_recieved', String, self.feedback_cb)
   rospy.Subscriber('turtlebot_position_in_map',Pose,self.pose_cb)
+  rospy.Timer(rospy.Duration(2), self.timer_cb)
   rospy.spin()
 
  def map_data(self):
@@ -67,7 +90,6 @@ class laser_point():
   
  def statice_area(self):
   self.static_area=maplib.get_effective_point(self.map)[1]
-
   #self.static_area_makers()####################visual_test  
     
  def visual_markers(self):
@@ -477,12 +499,6 @@ class laser_point():
    self.marker_pub.publish(self.laser_points_marker)####################visual_test
   except:
    pass
-     
- #def odom_cb(self,data):
-   #pass
-   
- def feedback_cb(self,data):
-  self.feedback=data.data
 
   
  def laser_cb(self,data):
@@ -513,7 +529,7 @@ class laser_point():
    
    if self.check(LaserData): #判断是否在误差许可之内为地图上已知点
     rospy.loginfo( 'obstacle detected' )
-    self.stop_flag.publish('stop')
+    self.stop_cb('stop')
    else:
     #print False
     pass
@@ -589,14 +605,91 @@ class laser_point():
    
    return line_marker
 
-
+  if Type==Marker.TEXT_VIEW_FACING:
+   #details 
+   flag_marker=Marker()
+   flag_marker.type = Type
+   flag_marker.header.frame_id='map'
+   flag_marker.text = "WARNING!!!"
+   flag_marker.ns="WarningFlag"
+   flag_marker.header.stamp=rospy.Time.now()
+   flag_marker.lifetime = rospy.Duration(0.5)
+   flag_marker.pose=data
+   return flag_marker
+   
+   
  def Q2A(self,quat):
   rot = PyKDL.Rotation.Quaternion(quat[0], quat[1], quat[2], quat[3])
   return rot.GetRPY()[2]
+ 
+ def stop_cb(self, data):
+  if self.info=='':
+   self.info=data
+  else:
+   self.stop_count+=1
+  #print data.data, self.stop_count
+  if self.info=="stop" and self.stop_count>2:
+   self.info=''
+   self.stop_count=0
+   self.stopmoveit()
+   self.addFlag()
+  else:
+   pass
   
+ def addFlag(self):
+  self.flag_makers()
+  self.marker_pub.publish(self.flag_marker)####################visual_test
+
+ def flag_makers(self):
+  color=ColorRGBA()
+  scale=Point()
+  pose = Pose()
+  scale.x=0.01
+  scale.y=0.01
+  scale.z=0.2
+  pose=self.pose
+  pose.position.z+=0.5
+  color.r=1.0
+  color.a=1.0
+  self.flag_marker=self.visual_test(pose, Marker.TEXT_VIEW_FACING, color, scale)
+
+ def stopmoveit(self):   
+  self.feedback='recieved'
+  rospy.loginfo("cancelling goal") 
+  print 'detected goal active:', self.stop_server.is_active()
+  if self.stop_server.is_active():
+   self.stop_server.set_aborted()
+   #self.stop_base.cancle_goal()
+   self.stop_base.cancel_all_goals()
+   self.stop_flag.publish('stop')
+  else:
+   print 'if new goal coming:',self.new_goal.header.seq!=0
+   if self.new_goal.header.seq!=0:
+    #print type(self.new_goal),'\n',self.new_goal
+    rospy.loginfo('registing new goal')
+    goal=MoveBaseGoal()
+    goal.target_pose.pose.position.x=self.new_goal.point.x
+    goal.target_pose.pose.position.y=self.new_goal.point.y
+    goal.target_pose.header.stamp=rospy.Time.now()
+    goal.target_pose.header.frame_id='map'
+    self.stop_base.send_goal(goal)
+    self.new_goal=PointStamped()
+   else:
+    self.stop_flag.publish('stop')
+  self.pubStopMess.publish(self.stop)
+ 
+ 
+ def timer_cb(self,event):
+  self.timer=event.current_real
+  self.new_goal=rospy.wait_for_message('/clicked_point',PointStamped)
+  rospy.loginfo('Planning a new path')
+  if rospy.is_shutdown():
+   rospy.signal_shutdown(reason)
+ 
+ 
   
 if __name__ == '__main__':
- rospy.init_node("detector", anonymous=True)
+ rospy.init_node("DetectorStopMove", anonymous=True)
  try:
   rospy.loginfo ("initialization system")
   laser_point()
