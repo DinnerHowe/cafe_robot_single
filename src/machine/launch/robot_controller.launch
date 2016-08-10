@@ -19,8 +19,7 @@
  <include file="$(find dynamic_3d_view)/launch/dynamic_3d_view.launch" />
 
  <!--障碍物报警机制-->
- <!--<include file="$(find obstacle_warning)/launch/obstacles_warning.launch" />-->
- <include file="$(find obstacle_warning)/launch/ObstaclesWarning.launch" />
+ <!--<include file="$(find obstacle_warning)/launch/ObstaclesWarning.launch" />-->
 
  <!--pob out image window-->
  <include file="$(find camera_image)/launch/camera_image.launch" />

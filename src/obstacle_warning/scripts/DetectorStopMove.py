@@ -6,13 +6,14 @@ Copyright (c) 2015 Xu Zhihao (Howe).  All rights reserved.
 This program is free software; you can redistribute it and/or modify
 This programm is tested on kuboki base turtlebot. 
 """
-import rospy,numpy,PyKDL,maplib,actionlib
+import rospy,numpy,PyKDL,maplib,actionlib,actions_reference
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import String,ColorRGBA,Time
 from geometry_msgs.msg import Point,Pose,Twist,PointStamped
 from nav_msgs.msg import Odometry,OccupancyGrid
 from visualization_msgs.msg import Marker
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from actionlib_msgs.msg import GoalStatusArray
 
 class laser_point():
  def define(self):
@@ -25,11 +26,15 @@ class laser_point():
   self.cut_points=[]#中分线的上下左右终点
   self.centre_points=[]
   self.feedback=''
+  self.EscapeTimes=0
+  self.MaxTryTimes=3
 
-  self.stop_count=0  
+
+  #self.stop_count=0  
   self.info=''
   self.stop=Twist()
   self.new_goal=PointStamped()
+
   
   if not rospy.has_param('~warning_marker_topic'):
    rospy.set_param('~warning_marker_topic','/warning_marker')
@@ -49,7 +54,7 @@ class laser_point():
 
   if not rospy.has_param('~detector_resolution'):
    rospy.set_param('~detector_resolution',20)
-  self.mim_space = rospy.get_param('~detector_resolution')
+  self.mim_space = rospy.get_param('~detector_resolution')#最小地图存储模块
   
   if not rospy.has_param('~detector_radius'):
    rospy.set_param('~detector_radius',0.35)
@@ -57,8 +62,9 @@ class laser_point():
 
   #functions
   self.pubStopMess = rospy.Publisher('%s'%self.StopMess_topic, Twist, queue_size=1)
+  self.click_point = rospy.Publisher('/clicked_point', PointStamped, queue_size=1)
   self.stop_base = actionlib.SimpleActionClient("%s"%self.action_topic, MoveBaseAction)
-  self.stop_server= actionlib.SimpleActionServer('%s'%self.action_topic, MoveBaseAction, False)
+  #self.stop_server= actionlib.SimpleActionServer('%s'%self.action_topic, MoveBaseAction, False)
   
   rospy.loginfo("waiting fro move_base action server")
   self.stop_base.wait_for_server(rospy.Duration(60))
@@ -72,7 +78,9 @@ class laser_point():
   self.map_data()
   rospy.Subscriber('/scan', LaserScan, self.laser_cb)
   rospy.Subscriber('turtlebot_position_in_map',Pose,self.pose_cb)
-  rospy.Timer(rospy.Duration(2), self.timer_cb)
+  rospy.Subscriber('/move_base/status', GoalStatusArray, self.status_callback)
+  #rospy.Timer(rospy.Duration(2), self.timer_cb)
+  rospy.Subscriber('clicked_point' ,PointStamped, self.goal_cb)
   rospy.spin()
 
  def map_data(self):
@@ -502,18 +510,26 @@ class laser_point():
 
   
  def laser_cb(self,data):
-  self.now=rospy.get_rostime()
+  # scan duration 0.3
   if self.feedback=='recieved':
    self.feedback=''
    #rospy.loginfo('sleeping')
-   rospy.sleep(0.5)
+   rospy.sleep(0.3)
+   
+  self.now=rospy.get_rostime()
   if data.header.stamp.secs==self.now.secs:
    #print 'time qt', data.header.stamp.secs==self.now.secs
    LaserData=[]
    count=0
+   
+   max_y=None
+   #min_y=None
+   max_x=None
+   #min_x=None
+   
    for i in data.ranges:
     #print 'get total points:', count
-    if 0.0<i<0.8:
+    if 0.0<i<0.9:
      if data.angle_min+data.angle_increment*count<=data.angle_max+data.angle_increment: 
       point=Point()
       angle=data.angle_min+data.angle_increment*count+self.oriation_angle
@@ -521,20 +537,93 @@ class laser_point():
       point.y=i*numpy.sin(angle)+self.pose.position.y+0.05
       #print 'i:', i, type(point.x), point.x ,type(numpy.nan) ,point.x==numpy.nan
       LaserData.append(point)
+      if point.x>max_x:
+       max_x=point.x
+      if point.y>max_y:
+       max_y=point.y
+      #if point.x<min_x:
+       #min_x=point.x
+      #if point.y<min_y:
+       #min_y=point.y
      else:
       rospy.loginfo( 'out of range' )
-    else:
-     pass
+             
     count+=1
-   
-   if self.check(LaserData): #判断是否在误差许可之内为地图上已知点
-    rospy.loginfo( 'obstacle detected' )
-    self.stop_cb('stop')
+    
+   self.result=self.check(LaserData)
+   if self.result: #判断是否在误差许可之内为地图上已知点 
+    self.TryEscape(max_y,max_x)
+    
+    
+   if len(LaserData)>80:
+    self.LaserDataMarker(LaserData)####################visual_test 
+
+
+ def TryEscape(self,max_y,max_x):
+  rospy.loginfo( 'obstacle detected' )
+  OriGoal=PointStamped()
+  try:
+   OriGoal=self.current_goal
+   EscGoal=PointStamped()
+     
+   if OriGoal.header.seq!=0:# and self.status!=3:
+    #print  OriGoal.header.seq!=0 and self.status!=3
+    self.EscapeTimes+=1
+    print 'EscapeTimes: ', self.EscapeTimes , 'MaxTryTimes', self.MaxTryTimes
+    #print 'OriGoal: ', OriGoal    
+             
+    if self.EscapeTimes==1:
+     rospy.loginfo( 'executing first escape' )
+     EscGoal.point.y=max_y+5*(max_y/abs(max_y))*self.map.info.resolution
+     EscGoal.point.x=max_x+5*(max_x/abs(max_x))*self.map.info.resolution
+     self.Escaping(EscGoal,OriGoal)
+     
+    elif self.EscapeTimes==2:
+     rospy.loginfo( 'executing second escape' )
+     EscGoal.point.y=max_y-5*(max_y/abs(max_y))*self.map.info.resolution
+     EscGoal.point.x=max_x-5*(max_x/abs(max_x))*self.map.info.resolution
+     self.Escaping(EscGoal,OriGoal)
+     
+    elif self.EscapeTimes==3:
+     rospy.loginfo( 'executing third escape' ) 
+     self.pubStopMess.publish(self.stop)
+     rospy.sleep(2)
+     #self.stopmoveit()
+     EscGoal.point.y=max_y+5*(max_y/abs(max_y))*self.map.info.resolution
+     EscGoal.point.x=max_x+5*(max_x/abs(max_x))*self.map.info.resolution
+     self.Escaping(EscGoal,OriGoal)
+     
+    #if self.EscapeTimes > self.MaxTryTimes:
+    else:
+     self.stop_cb('stop')  
+        
    else:
-    #print False
-    pass
+    rospy.loginfo( '未检测到任务，锁定机器人' )
+    #self.stop_flag.publish('stop')
+    self.pubStopMess.publish(self.stop)
+    self.addFlag()
+     
+  except:
+   rospy.loginfo( '未检测到任务，锁定机器人2' )
+   #self.stop_flag.publish('stop')
+   self.pubStopMess.publish(self.stop)
+   self.addFlag()
+
    
-   self.LaserDataMarker(LaserData)####################visual_test
+ def Escaping(self,EscGoal,OriGoal):
+  
+  self.current_odom=Pose()
+  self.current_odom=rospy.wait_for_message("turtlebot_position_in_map", Pose)
+  actions_reference.tasks(self.current_odom.position, EscGoal.point)
+  while self.status!=3:
+   pass
+  rospy.loginfo('robot escaped')
+  #actions_reference.tasks(EscGoal.point, OriGoal.point)
+  OriGoal.header.seq+=1
+  OriGoal.header.stamp=rospy.get_rostime()
+  if 
+   self.click_point.publish(OriGoal)
+   rospy.loginfo('robot restored goal')
 
 #检查镭射是否为地图上的静态障碍物（eg，wall door etc.）
  def check(self,data):
@@ -627,12 +716,14 @@ class laser_point():
    self.info=data
   else:
    self.stop_count+=1
+   pass
   #print data.data, self.stop_count
   if self.info=="stop" and self.stop_count>2:
    self.info=''
-   self.stop_count=0
+   #self.stop_count=0
    self.stopmoveit()
    self.addFlag()
+   self.EscapeTimes=0 
   else:
    pass
   
@@ -656,15 +747,14 @@ class laser_point():
  def stopmoveit(self):   
   self.feedback='recieved'
   rospy.loginfo("cancelling goal") 
-  print 'detected goal active:', self.stop_server.is_active()
-  if self.stop_server.is_active():
-   self.stop_server.set_aborted()
-   #self.stop_base.cancle_goal()
+  if self.status!=3:
    self.stop_base.cancel_all_goals()
    self.stop_flag.publish('stop')
+   self.pubStopMess.publish(self.stop)
   else:
-   print 'if new goal coming:',self.new_goal.header.seq!=0
-   if self.new_goal.header.seq!=0:
+   print 'if new goal coming:',self.new_goal.header.seq!=self.current_goal.header.seq
+   if self.new_goal.header.seq!=self.current_goal.header.seq:
+    self.new_goal=self.current_goal
     #print type(self.new_goal),'\n',self.new_goal
     rospy.loginfo('registing new goal')
     goal=MoveBaseGoal()
@@ -673,20 +763,22 @@ class laser_point():
     goal.target_pose.header.stamp=rospy.Time.now()
     goal.target_pose.header.frame_id='map'
     self.stop_base.send_goal(goal)
-    self.new_goal=PointStamped()
+    #self.new_goal=PointStamped()
    else:
+    self.stop_base.cancel_all_goals()
     self.stop_flag.publish('stop')
-  self.pubStopMess.publish(self.stop)
+    self.pubStopMess.publish(self.stop)
  
  
- def timer_cb(self,event):
-  self.timer=event.current_real
-  self.new_goal=rospy.wait_for_message('/clicked_point',PointStamped)
+ def goal_cb(self,data):
+  self.current_goal=data
   rospy.loginfo('Planning a new path')
   if rospy.is_shutdown():
-   rospy.signal_shutdown(reason)
- 
- 
+   rospy.signal_shutdown('shutdown')
+   
+ def status_callback(self, goal_state):
+  if len(goal_state.status_list)>0:
+   self.status=goal_state.status_list[0].status
   
 if __name__ == '__main__':
  rospy.init_node("DetectorStopMove", anonymous=True)

@@ -8,7 +8,7 @@ This programm is tested on kuboki base turtlebot.
 """
 import rospy,numpy,PyKDL,maplib
 from sensor_msgs.msg import LaserScan
-from std_msgs.msg import String,ColorRGBA,Time
+from std_msgs.msg import String,ColorRGBA#,Time
 from geometry_msgs.msg import Point,Pose
 from nav_msgs.msg import Odometry,OccupancyGrid
 from visualization_msgs.msg import Marker
