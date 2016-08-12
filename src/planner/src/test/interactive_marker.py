@@ -7,68 +7,173 @@ This program is free software; you can redistribute it and/or modify
 
 This programm is tested on kuboki base turtlebot. 
 
-http://wiki.ros.org/rviz/Tutorials/Interactive%20Markers%3A%20Writing%20a%20Simple%20Interactive%20Marker%20Server
 """
-import rospy
+import rospy,copy
 from visualization_msgs.msg import InteractiveMarker
 from visualization_msgs.msg import Marker
 from visualization_msgs.msg import InteractiveMarkerControl
+
+
 from visualization_msgs.msg import InteractiveMarkerFeedback
 from visualization_msgs.msg import InteractiveMarkerInit
 from visualization_msgs.msg import InteractiveMarkerPose
 from visualization_msgs.msg import InteractiveMarkerUpdate
-from std_msgs.msg import Header
+from threading import Lock
+
+from geometry_msgs.msg import PointStamped#,PoseStamped,Pose
+
+#from nav_msgs.msg import Path
+#from std_msgs.msg import ColorRGBA
+
   
+###############################
+##### Interactive Server ######
+###############################
+class Server:
+ def __init__(self,root_topic):
+  self.locker = Lock()
+  self.obstacle=None
+  self.root_topic='/'+root_topic
+  self.update_ = rospy.Publisher(self.root_topic+"/update", InteractiveMarkerUpdate ,queue_size=10)
+  self.init_ = rospy.Publisher(self.root_topic+'/update_full', InteractiveMarkerInit, queue_size=10)
+  
+  self.seq_num = 0
+  self.server_id = self.root_topic
+  
+  self.Current = InteractiveMarkerUpdate()
+  self.Candidate = InteractiveMarkerFeedback()
+  
+  rospy.Subscriber(self.root_topic+'/feedback', InteractiveMarkerFeedback, self.RvizFeedback, queue_size=10)
+  rospy.Timer(rospy.Duration(0.1), self.standbycb)
+  self.PublishInit()
+  
+ def AddObstacle(self, obstacle):
+  with self.locker:
+   self.obstacle=obstacle
+   self.Current.type = InteractiveMarkerFeedback.KEEP_ALIVE
+   self.Current.server_id = self.server_id
+   self.Current.seq_num = self.seq_num
+   self.Current.markers.append(self.obstacle)
+ 
+ def start(self):
+  with self.locker:
+   if self.obstacle == None:
+    return
+   else:
+    self.Current.type = InteractiveMarkerUpdate.UPDATE
+    self.Current.seq_num = self.seq_num
+    self.Current.markers.append(copy.deepcopy(self.obstacle))
+
+    self.seq_num += 1   
+    self.PublishCB(self.Current)
+    self.PublishInit()
+  
+ #sever for moving object
+ def MovingServer(self):
+  with self.locker:
+   self.Current.type = InteractiveMarkerUpdate.UPDATE
+   self.Current.seq_num = self.seq_num
+   self.Current.markers.append(copy.deepcopy(self.obstacle))
+   
+   position = InteractiveMarkerPose()
+   position.header.seq = self.seq_num
+   position.header.stamp = rospy.Time.now()
+   position.header.frame_id = 'map'
+   position.name = self.obstacle.name
+   position.pose = self.Candidate.pose
+
+   self.Current.poses.append(copy.deepcopy(position))
+
+   self.seq_num += 1   
+   self.PublishCB(self.Current)
+   self.PublishInit()
+        
+ def RvizFeedback(self, feedback):
+  with self.locker: 
+   self.Candidate = feedback
+   #rospy.loginfo('\nfeedback: ' + '%s'%self.Candidate)
+   self.MovingServer()
+   
+ def standbycb(self, event):
+  with self.locker:
+   standby=InteractiveMarkerUpdate()
+   standby.type = InteractiveMarkerUpdate.KEEP_ALIVE
+   self.PublishCB(standby)
+   
+ def PublishCB(self,data):
+  data.server_id = self.server_id
+  data.seq_num = self.seq_num
+  self.update_.publish(data)
+  
+ def PublishInit(self):
+  initData = InteractiveMarkerInit()
+  initData.server_id = self.server_id
+  initData.seq_num = self.seq_num
+  if self.obstacle == None:
+   #print 'self.obstacle == None\n',initData
+   initData.markers=[]
+   self.init_.publish(initData)
+  else:
+   initData.markers.append(self.obstacle)
+   #print 'self.obstacle != None\n',initData
+   self.init_.publish(initData)
+
+
+###############################
+#########  obstacles ##########
+###############################
 class obstacles():
  def __init__(self):
-  self.define()
-  self.marker()
+  root_topic = self.define()
+  #self.PathRecording = PathRecording(root_topic)
+  self.server = Server(root_topic)
+  position =  rospy.wait_for_message('/clicked_point', PointStamped)
+
+  self.marker(root_topic, position.point)
+  self.server.start()
+  #self.PathRecording.start()
+  rospy.spin()
   
-  self.Subscriber(self.root_topic+'/feedback', InteractiveMarkerFeedback, queue_size=1)
-  rospy.timer(rospy.Duration(0.5), self.timercb)
-  
-  
- def marker(self):
-  self.obstacle.header.frame_id='map'
-  self.obstacle.name='obstacles'
-  self.obstacle.description('test_marker')
-  
-  self.unit.type=Marker.CUBE
-  self.unit.scale.x = 0.45
-  self.unit.scale.y = 0.45
-  self.unit.scale.z = 0.45
-  self.unit.color.r = 0.5
-  self.unit.color.r = 1.0
-  
-  self.control.orientation.w = 1
-  self.control.orientation.y = 1
-  self.control.always_visible=True
-  self.control.interaction_mode= InteractiveMarkerControl.MOVE_PLANE
-  self.control.markers.append(self.unit)
-  
-  self.obstacle.controls.append(self.control)
-  self.
-  
+ #initial define 
  def define(self):
- 
   self.obstacle=InteractiveMarker()
   self.unit=Marker()
   self.control=InteractiveMarkerControl()
-  self.update_=rospy.Publisher(self.root_topic+"/Update", InteractiveMarkerUpdate ,queue_size=1)
-  self.init_=rospy.Publisher(self.root_topic+'/Init', InteractiveMarkerInit, queue_size=1)
-  self.seq_num=0
-  self.server_id = self.root_topic + '%s'%(rospy.Timer.now) 
-  
-  
+  root_topic = 'test_obstacles'
+  return root_topic
 
+ #the moving object  
+ def marker(self,root_topic,position):
+  self.obstacle.header.frame_id='map'
+  self.obstacle.name='obstacles'
+  self.obstacle.description='test_marker'
+  self.obstacle.pose.position=position
+  self.obstacle.pose.position.z = 0.0
+  self.obstacle.scale=0.6
   
- def timercb(self, event):
-  standby=InteractiveMarkerUpdate()
-  standby.type = InteractiveMarkerUpdate.KEEP_ALIVE
-  standby.server_id  = self.server_id
-  standby.seq_num = self.seq_num
-  self.update_.publish(standby)
+  self.unit.type = Marker.CUBE
+  self.unit.scale.x = 0.45
+  self.unit.scale.y = 0.45
+  self.unit.scale.z = 0.45
+  self.unit.color.r = 1.0
+  self.unit.color.g = 1.0
+  self.unit.color.b = 0.5
+  self.unit.color.a = 1.0
   
+  self.obstacle.pose.position.z += self.unit.scale.z/2
+  
+  self.control.orientation.w = 1
+  self.control.orientation.y = 1
+  self.control.interaction_mode= InteractiveMarkerControl.MOVE_PLANE
+  self.control.always_visible=True
+  
+  self.control.markers.append(copy.deepcopy(self.unit))
+  self.obstacle.controls.append(copy.deepcopy(self.control))
+  
+  self.server.AddObstacle(self.obstacle)
+
+
+
 if __name__=='__main__':
  rospy.init_node('test_obstacles')
  try:
