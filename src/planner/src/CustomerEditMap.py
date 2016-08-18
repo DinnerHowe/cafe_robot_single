@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #coding=utf-8
 """
-rviz 地图编辑软件测试算法用
+rviz 自定义编辑地图
 
 Copyright (c) Xu Zhihao (Howe).  All rights reserved.
 
@@ -12,18 +12,34 @@ This programm is tested on kuboki base turtlebot.
 import numpy as np
 import rospy,yaml,numpy,Image
 from nav_msgs.msg import OccupancyGrid 
+from threading import Lock
+import maplib
+from geometry_msgs.msg import PointStamped
 
 class grid_map():
  def __init__(self):
   self.define()
-  Map=self.ReadPGMMap()
-  #rospy.Subscriber('',Pose,self.pose_cb)
-  while not rospy.is_shutdown():
-   self.test_map.publish(Map)
+  self.Map=self.ReadPGMMap()
+  rospy.Subscriber('/clicked_point', PointStamped, self.MessPosition, queue_size=1)
+  rospy.Timer(rospy.Duration(0.5), self.StandBy)
+  rospy.spin()
+  
+ def MessPosition(self, point):
+  with self.locker: 
+   num = maplib.position_num(self.Map, point.point)
+   self.Map.data[num]=100
+   
+   self.test_map.publish(self.Map)
+   
+ def StandBy(self,event):
+  with self.locker:
+   self.test_map.publish(self.Map)
    
  def define(self):
+  self.locker = Lock()
   self.filename='/home/howe/cafe_robot_single/src/nav_staff/map/'
   self.test_map=rospy.Publisher("test_map", OccupancyGrid ,queue_size=1)
+  self.root_topic='/test_obstacles'
   
  def ReadPGMMap(self):
   (image,resolution,origin)=  self.ReadYaml()
@@ -50,7 +66,7 @@ class grid_map():
      Map.data.append(100)
     else:
      Map.data.append(0)
-  print Map.info
+  #print Map.info
   return Map
    
  def ReadYaml(self):
@@ -61,7 +77,7 @@ class grid_map():
   origin=data['origin']
   return (image,resolution,origin)
   
- 
+   
 if __name__=='__main__':
  rospy.init_node('grid_map')
  try:

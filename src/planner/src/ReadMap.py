@@ -10,19 +10,41 @@ This program is free software; you can redistribute it and/or modify
 This programm is tested on kuboki base turtlebot. 
 """
 import numpy as np
-import rospy,yaml,numpy,Image
+import rospy,yaml,numpy,Image,copy
 from nav_msgs.msg import OccupancyGrid 
+from geometry_msgs.msg import Pose
+from threading import Lock
+import maplib
+from geometry_msgs.msg import PointStamped
 
 class grid_map():
  def __init__(self):
   self.define()
-  Map=self.ReadPGMMap()
-  while not rospy.is_shutdown():
-   self.test_map.publish(Map)
+  self.init_map = self.ReadPGMMap()
+  self.Map =  copy.deepcopy(self.init_map)
+  self.Map.data = []
+  rospy.Subscriber(self.root_topic+'/projection', PointStamped, self.MessPosition, queue_size=1)
+  rospy.Timer(rospy.Duration(1), self.Clear)
+  rospy.spin()
+  
+ def MessPosition(self, position):
+  with self.locker: 
+   num = maplib.position_num(self.Map, position.point)
+   #print num,len(self.Map.data)#,cmp(self.Map.data, self.init_map.data)
+   self.Map.data = copy.deepcopy(self.init_map.data)
+   self.Map.data[num] = 80 
+   self.test_map.publish(self.Map)
+   
+ def Clear(self,event):
+  with self.locker:
+   self.test_map.publish(self.init_map)
    
  def define(self):
+  self.locker = Lock()
+  
   self.filename='/home/howe/cafe_robot_single/src/nav_staff/map/'
   self.test_map=rospy.Publisher("test_map", OccupancyGrid ,queue_size=1)
+  self.root_topic='/test_obstacles'
   
  def ReadPGMMap(self):
   (image,resolution,origin)=  self.ReadYaml()

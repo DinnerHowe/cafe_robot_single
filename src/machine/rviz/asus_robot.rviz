@@ -17,8 +17,8 @@ Panels:
     Expanded:
       - /2D Pose Estimate1
       - /Publish Point1
-      - /Tea Table1
       - /Tropical_ Plant1
+      - /Tea Table1
     Name: Tool Properties
     Splitter Ratio: 0.588679
   - Class: rviz/Views
@@ -30,7 +30,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: LaserScan
+    SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
@@ -83,6 +83,7 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         base_link:
           Alpha: 1
           Show Axes: false
@@ -109,142 +110,165 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        caster_back_link:
+        front_wheel_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        caster_front_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        cliff_sensor_front_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        cliff_sensor_left_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        cliff_sensor_right_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
         gyro_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        mount_asus_xtion_pro_link:
+        laser:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        plate_bottom_link:
+        left_cliff_sensor_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        left_wheel_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        plate_middle_link:
+        leftfront_cliff_sensor_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        plate_0_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        plate_top_link:
+        plate_1_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_bottom_0_link:
+        plate_2_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_bottom_1_link:
+        plate_3_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_bottom_2_link:
+        rear_wheel_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_bottom_3_link:
+        right_cliff_sensor_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        right_wheel_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_bottom_4_link:
+        rightfront_cliff_sensor_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        spacer_0_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_bottom_5_link:
+        spacer_1_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_kinect_0_link:
+        spacer_2_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_kinect_1_link:
+        spacer_3_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_middle_0_link:
+        standoff_2in_0_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_middle_1_link:
+        standoff_2in_1_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_middle_2_link:
+        standoff_2in_2_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_middle_3_link:
+        standoff_2in_3_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_top_0_link:
+        standoff_2in_4_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_top_1_link:
+        standoff_2in_5_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_top_2_link:
+        standoff_2in_6_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        pole_top_3_link:
+        standoff_2in_7_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        wheel_left_link:
+        standoff_8in_0_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        wheel_right_link:
+        standoff_8in_1_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
+        standoff_8in_2_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        standoff_8in_3_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        standoff_kinect_0_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        standoff_kinect_1_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wall_sensor_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -318,7 +342,7 @@ Visualization Manager:
       Marker Topic: /ui_marker
       Name: ui_marker
       Namespaces:
-        task_points: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -342,7 +366,7 @@ Visualization Manager:
       Marker Topic: /detector_marker
       Name: detector_Marker
       Namespaces:
-        detector_visual_test: true
+        {}
       Queue Size: 100
       Value: true
   Enabled: true
@@ -415,10 +439,10 @@ Visualization Manager:
 Window Geometry:
   Displays:
     collapsed: true
-  Height: 848
+  Height: 876
   Hide Left Dock: true
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000016a000002e2fc0200000006fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006400fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730000000028000002e2000000dd00fffffffb0000000a0049006d006100670065000000028d000000c60000000000000000000000010000010f000002c6fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730100000028000002c6000000b000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000002ff0000003efc0100000002fb0000000800540069006d00650100000000000002ff000002f600fffffffb0000000800540069006d00650100000000000004500000000000000000000001ea000002c600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000016a000002e2fc0200000006fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006400fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730000000028000002e2000000dd00fffffffb0000000a0049006d006100670065000000028d000000c60000000000000000000000010000010f000002e2fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730100000028000002e2000000b000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000005ff0000003efc0100000002fb0000000800540069006d00650100000000000005ff000002f600fffffffb0000000800540069006d00650100000000000004500000000000000000000004ea000002e200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -427,6 +451,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 767
-  X: 832
-  Y: 52
+  Width: 1535
+  X: 1665
+  Y: 24

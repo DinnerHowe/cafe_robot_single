@@ -1,0 +1,3 @@
+<launch>
+  <node pkg="cafe_robot_total" type="single_asus_robot_total_cruise.py" name="single_asus_robot_total_cruise" output="screen" />
+</launch>

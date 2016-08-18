@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #coding=utf-8
 """
+可操作，可移动的障碍物
 Copyright (c) Xu Zhihao (Howe).  All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -20,7 +21,8 @@ from visualization_msgs.msg import InteractiveMarkerPose
 from visualization_msgs.msg import InteractiveMarkerUpdate
 from threading import Lock
 
-from geometry_msgs.msg import PointStamped#,PoseStamped,Pose
+from geometry_msgs.msg import PointStamped#,PoseStamped,
+#from geometry_msgs.msg import Pose
 
 #from nav_msgs.msg import Path
 #from std_msgs.msg import ColorRGBA
@@ -34,14 +36,16 @@ class Server:
   self.locker = Lock()
   self.obstacle=None
   self.root_topic='/'+root_topic
-  self.update_ = rospy.Publisher(self.root_topic+"/update", InteractiveMarkerUpdate ,queue_size=10)
-  self.init_ = rospy.Publisher(self.root_topic+'/update_full', InteractiveMarkerInit, queue_size=10)
-  
+  self.update_ = rospy.Publisher(self.root_topic+"/update", InteractiveMarkerUpdate ,queue_size=100)
+  self.init_ = rospy.Publisher(self.root_topic+'/update_full', InteractiveMarkerInit, queue_size=100)
+  self.projection_ = rospy.Publisher(self.root_topic+'/projection', PointStamped, queue_size=1)
+    
   self.seq_num = 0
   self.server_id = self.root_topic
   
   self.Current = InteractiveMarkerUpdate()
   self.Candidate = InteractiveMarkerFeedback()
+  self.CurrentP = PointStamped()
   
   rospy.Subscriber(self.root_topic+'/feedback', InteractiveMarkerFeedback, self.RvizFeedback, queue_size=10)
   rospy.Timer(rospy.Duration(0.1), self.standbycb)
@@ -70,29 +74,39 @@ class Server:
   
  #sever for moving object
  def MovingServer(self):
-  with self.locker:
-   self.Current.type = InteractiveMarkerUpdate.UPDATE
-   self.Current.seq_num = self.seq_num
-   self.Current.markers.append(copy.deepcopy(self.obstacle))
+  #with self.locker:
+  #print 'into MovingServer'
+  self.Current.type = InteractiveMarkerUpdate.UPDATE
+  self.Current.seq_num = self.seq_num
+  self.Current.markers.append(copy.deepcopy(self.obstacle))
    
-   position = InteractiveMarkerPose()
-   position.header.seq = self.seq_num
-   position.header.stamp = rospy.Time.now()
-   position.header.frame_id = 'map'
-   position.name = self.obstacle.name
-   position.pose = self.Candidate.pose
+  position = InteractiveMarkerPose()
+  position.header.seq = self.seq_num
+  position.header.stamp = rospy.Time.now()
+  position.header.frame_id = 'map'
+  position.name = self.obstacle.name
+  position.pose = self.Candidate.pose
 
-   self.Current.poses.append(copy.deepcopy(position))
+  self.Current.poses.append(copy.deepcopy(position))
 
-   self.seq_num += 1   
-   self.PublishCB(self.Current)
-   self.PublishInit()
+  self.seq_num += 1   
+  self.PublishCB(self.Current)
+  self.PublishInit()
+  self.Projection()
+   
+ #投影到地图上
+ def Projection(self):
+  #print 'into Projection'
+  self.CurrentP.point = self.Candidate.pose.position
+  self.projection_.publish(self.CurrentP)
+        
         
  def RvizFeedback(self, feedback):
   with self.locker: 
    self.Candidate = feedback
    #rospy.loginfo('\nfeedback: ' + '%s'%self.Candidate)
    self.MovingServer()
+
    
  def standbycb(self, event):
   with self.locker:
@@ -148,7 +162,8 @@ class obstacles():
   self.obstacle.name='obstacles'
   self.obstacle.description='test_marker'
   self.obstacle.pose.position=position
-  self.obstacle.pose.position.z = 0.0
+  #self.obstacle.pose.position.z = 0.0
+  self.obstacle.pose.position.z = 0.5 #for testing
   self.obstacle.scale=0.6
   
   self.unit.type = Marker.CUBE
