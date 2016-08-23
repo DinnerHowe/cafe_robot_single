@@ -10,6 +10,19 @@ This programm is tested on kuboki base turtlebot.
 #import collections
 from geometry_msgs.msg import Point
 import PyKDL
+import numpy
+ 
+ 
+ ##转化坐标系
+def Trans(self, quaterion, Mapdata):
+ theata = quat_to_angle([quaterion.x,quaterion.y,quaterion.z,quaterion.w])
+ Tdata = []
+ Tpoint=Point()
+ for i in Mapdata:
+  Tpoint.x = i.x * numpy.cos(theata) + i.y * numpy.sin(theata)
+  Tpoint.y = i.y * numpy.cos(theata) - i.x * numpy.sin(theata)
+  Tdata.append(copy.deepcopy(Tpoint))
+ return Tdata
 
 #return RPY angle in rad
 def quat_to_angle(quat):

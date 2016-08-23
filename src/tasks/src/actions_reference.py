@@ -19,18 +19,59 @@ from visualization_msgs.msg import Marker
 from math import *
 
 #回航导航入口
-def cruise():
- marker_point=rospy.wait_for_message("visualization_marker", Marker)
- point_list=marker_point.points
+def cruise(Plist):
+ #Current_point=rospy.wait_for_message("visualization_marker", Marker)
+ point_list=Plist
  intial_point=point_list[0]
  point_list.remove(intial_point)
- point_list.append(intial_point)
+ #point_list.append(intial_point)
  count=0
- for point in point_list:
-  rospy.loginfo('moving forwarding to %s_st target'%count)
-  count+=1
-  tasks(intial_point,point)
+ multitasks(intial_point,Plist[0])
+ print len(Plist)
+ while not rospy.is_shutdown():
+  for i in range(len(Plist)):
+   rospy.loginfo('moving forwarding to %s_st target'%count)
+   count+=1
+   if i < (len(Plist)-1):
+    print 'forward',Plist[i],Plist[i+1]
+    multitasks(Plist[i],Plist[i+1])
+   else:
+    print 'backward'
+    Plist.reverse()
+    i=0
+    #multitasks(Plist[i],Plist[i-1])
+  
+
+#多任务执行 #angle by goal && orientation
+def multitasks(intial_point,point):
+ move_base = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+ move_base.wait_for_server()
+ goal = MoveBaseGoal()
+ init_point=intial_point
+
+ angle=move_reference.angle_generater(point,init_point)
  
+ try:
+  goal.target_pose.header.frame_id = pose.header.frame_id
+ except:
+  goal.target_pose.header.frame_id = 'map'
+ goal.target_pose.pose.position=point
+ (goal.target_pose.pose.orientation.x,goal.target_pose.pose.orientation.y,goal.target_pose.pose.orientation.z,goal.target_pose.pose.orientation.w)=move_reference.angle_to_quat(angle)
+ move_base.send_goal(goal)
+ 
+ finished_within_time = move_base.wait_for_result(rospy.Duration(300)) 
+ if not finished_within_time:
+  move_base.cancel_goal()
+  rospy.loginfo("Timed out achieving goal")
+ else:
+  state = move_base.get_state()
+  if state == GoalStatus.SUCCEEDED:
+   rospy.loginfo("Goal succeeded!")
+   rospy.loginfo("State:" + str(state))
+  else:
+   rospy.loginfo('fail to acheive goal')
+
+                  
 #单向导航入口 
 def go(current_odom,marker_point):
  if len(marker_point.points)==1:

@@ -1,0 +1,11 @@
+roslaunch cafe_robot_total single_asus_robot_total_cruise.launch
+rosrun nav_staff init_pose_handle.py
+
+分步运行：
+roslaunch machine asus_turtlebot_bringup.launch
+rosrun machine path.py
+roslaunch machine asus_robot_amcl.launch
+roslaunch marker ui_marker.launch
+roslaunch machine robot_controller_cruise.launch
+roslaunch machine 3D_RVIZ.launch
+rosrun nav_staff init_pose_handle.py

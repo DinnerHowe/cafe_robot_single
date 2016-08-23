@@ -23,6 +23,7 @@ class grid_map():
   self.init_map = self.ReadPGMMap()
   self.Map =  copy.deepcopy(self.init_map)
   self.Map.data = []
+  self.start = True
   rospy.Subscriber(self.root_topic+'/projection', PointStamped, self.MessPosition, queue_size=1)
   rospy.Timer(rospy.Duration(1), self.Clear)
   rospy.spin()
@@ -32,18 +33,39 @@ class grid_map():
    num = maplib.position_num(self.Map, position.point)
    #print num,len(self.Map.data)#,cmp(self.Map.data, self.init_map.data)
    self.Map.data = copy.deepcopy(self.init_map.data)
-   self.Map.data[num] = 80 
+   self.Map.data[num] = 100 
+   ## 扩大投影面积
+   size = 1
+   size = int(size*10/2)
+   for i in range(size):
+    #self.Map.data[num+i] = 100
+    #self.Map.data[num+i*self.Map.info.width] = 100
+    for j in range(size):
+     self.Map.data[num+i*self.Map.info.width + j] = 100
+     self.Map.data[num+i*self.Map.info.width - j] = 100
+     
+   for i in range(size):
+    #self.Map.data[num-i] = 100
+    #self.Map.data[num-i*self.Map.info.width] = 100
+    for j in range(size):
+     self.Map.data[num-i*self.Map.info.width + j] = 100
+     self.Map.data[num-i*self.Map.info.width - j] = 100
+     
    self.test_map.publish(self.Map)
    
  def Clear(self,event):
   with self.locker:
-   self.test_map.publish(self.init_map)
+   if self.start:
+    self.test_map.publish(self.init_map)
+    self.start = False
+   else:
+    pass
    
  def define(self):
   self.locker = Lock()
   
   self.filename='/home/howe/cafe_robot_single/src/nav_staff/map/'
-  self.test_map=rospy.Publisher("test_map", OccupancyGrid ,queue_size=1)
+  self.test_map=rospy.Publisher("map", OccupancyGrid ,queue_size=1)
   self.root_topic='/test_obstacles'
   
  def ReadPGMMap(self):

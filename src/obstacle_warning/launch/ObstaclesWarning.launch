@@ -8,9 +8,9 @@
   
   <arg name="turtlebot_position_topic"          default="turtlebot_position_in_map" />
   
-  <arg name="detector_resolution"          default='50' />
+  <arg name="detector_resolution"          default='20' />
   
-  <arg name="detector_radius"          default='0.4' />
+  <arg name="detector_radius"          default='0.35' />
   
   <!--stopmove_edit.py-->  
   <node pkg="obstacle_warning" type="DetectorStopMove.py" name="DetectorStopMove"  output="screen">
