@@ -39,7 +39,8 @@ class Server:
   self.update_ = rospy.Publisher(self.root_topic+"/update", InteractiveMarkerUpdate ,queue_size=100)
   self.init_ = rospy.Publisher(self.root_topic+'/update_full', InteractiveMarkerInit, queue_size=100)
   self.projection_ = rospy.Publisher(self.root_topic+'/projection', PointStamped, queue_size=1)
-    
+  self.ProjectionSize_pub = rospy.Publisher(self.root_topic+'/projection/size', String ,queue_size=1)
+  
   self.seq_num = 0
   self.server_id = self.root_topic
   
@@ -99,7 +100,7 @@ class Server:
   #print 'into Projection'
   self.CurrentP.point = self.Candidate.pose.position
   self.projection_.publish(self.CurrentP)
-        
+  self.ProjectionSize_pub.publish('None')      
         
  def RvizFeedback(self, feedback):
   with self.locker: 
