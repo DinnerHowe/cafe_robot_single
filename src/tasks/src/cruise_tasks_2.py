@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #coding=utf-8
 """
-multi-goal tasks
+multi-goal tasks,不在actions_reference中进行检测目标点迭代（有缺陷）
 
 Copyright (c) 2015 Xu Zhihao (Howe).  All rights reserved.
 

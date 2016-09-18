@@ -1,0 +1,37 @@
+<launch>
+
+  <arg name="warning_marker_topic"      default="/warning_marker" />
+  
+  <arg name="stop_flag_topic"           default="/stop_flag" />
+  
+  <arg name="Projection_topic"          default="/test_obstacles/projection" />
+  
+  <arg name="detector_resolution"       default="20" />
+  
+  <arg name="detector_radius"           default='0.2' />
+  
+  <arg name="Maxdetect"                 default='1.0' />
+
+  <arg name="Mindetect"                 default='0.0' />
+  
+   
+  <!--stopmove_edit.py-->  
+  <node pkg="obstacle_warning" type="DetectorStopMove2.py" name="DetectorStopMove"  output="screen">
+   
+   <param name='warning_marker_topic'   value="$(arg warning_marker_topic)" />
+   
+   <param name="stop_flag_topic"        value="$(arg stop_flag_topic)" />
+   
+   <param name='Projection_topic'       value="$(arg Projection_topic)" />
+   
+   <param name='detector_resolution'    value="$(arg detector_resolution)" />
+  
+   <param name='detector_radius'        value="$(arg detector_radius)" />
+   
+   <param name='Maxdetect'              value="$(arg Maxdetect)" />
+
+   <param name='Mindetect'              value="$(arg Mindetect)" />
+   
+  </node>
+
+</launch>

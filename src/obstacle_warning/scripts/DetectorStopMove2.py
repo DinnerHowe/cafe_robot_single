@@ -48,21 +48,21 @@ class laser_point():
    rospy.set_param('~stop_flag_topic','/stop_flag')
   self.stop_flag_topic = rospy.get_param('~stop_flag_topic')
 
-  if not rospy.has_param('~staticarea_marker_topic'):
-   rospy.set_param('~staticarea_marker_topic','/staticarea_marker')
-  self.staticarea_marker_topic = rospy.get_param('~staticarea_marker_topic')
+  #if not rospy.has_param('~staticarea_marker_topic'):
+   #rospy.set_param('~staticarea_marker_topic','/staticarea_marker')
+  #self.staticarea_marker_topic = rospy.get_param('~staticarea_marker_topic')
 
   #if not rospy.has_param('~cleararea_marker_topic'):
    #rospy.set_param('~cleararea_marker_topic','/cleararea_marker')
   #self.cleararea_marker_topic = rospy.get_param('~cleararea_marker_topic')
 
-  if not rospy.has_param('~Cposition_marker_topic'):
-   rospy.set_param('~Cposition_marker_topic','/Cposition_marker')
-  self.Cposition_marker_topic = rospy.get_param('~Cposition_marker_topic')
+  #if not rospy.has_param('~Cposition_marker_topic'):
+   #rospy.set_param('~Cposition_marker_topic','/Cposition_marker')
+  #self.Cposition_marker_topic = rospy.get_param('~Cposition_marker_topic')
 
-  if not rospy.has_param('~detected_obstacles_topic'):
-   rospy.set_param('~detected_obstacles_topic','/detected_obstacles')
-  self.detected_obstacles_topic = rospy.get_param('~detected_obstacles_topic')
+  #if not rospy.has_param('~detected_obstacles_topic'):
+   #rospy.set_param('~detected_obstacles_topic','/detected_obstacles')
+  #self.detected_obstacles_topic = rospy.get_param('~detected_obstacles_topic')
   
   if not rospy.has_param('~Projection_topic'):
    rospy.set_param('~Projection_topic','/test_obstacles/projection')
@@ -72,9 +72,9 @@ class laser_point():
    #rospy.set_param('~ProjectionSize_topic','/test_obstacles/projection/size')
   #self.ProjectionSize_topic = rospy.get_param('~ProjectionSize_topic') 
 
-  if not rospy.has_param('~detector_marker_topic'):
-   rospy.set_param('~detector_marker_topic','/detector_marker')
-  self.detector_marker_topic = rospy.get_param('~detector_marker_topic')  
+  #if not rospy.has_param('~detector_marker_topic'):
+   #rospy.set_param('~detector_marker_topic','/detector_marker')
+  #self.detector_marker_topic = rospy.get_param('~detector_marker_topic')  
 
   #最小地图存储模块
   if not rospy.has_param('~detector_resolution'):
@@ -88,7 +88,7 @@ class laser_point():
 
   #最远警戒范围
   if not rospy.has_param('~Maxdetect'):
-   rospy.set_param('~Maxdetect',0.7)
+   rospy.set_param('~Maxdetect',1.0)
   self.Maxdetect = rospy.get_param('~Maxdetect')
   
   #最近警戒范围
@@ -96,13 +96,14 @@ class laser_point():
    rospy.set_param('~Mindetect',0.0)
   self.Mindetect = rospy.get_param('~Mindetect')
  
+  # setting up topics
   self.warning_marker = rospy.Publisher("%s"%self.warning_marker_topic, Marker ,queue_size=1)
   
-  self.staticarea_pub = rospy.Publisher("%s"%self.staticarea_marker_topic, Marker ,queue_size=1)
+  #self.staticarea_pub = rospy.Publisher("%s"%self.staticarea_marker_topic, Marker ,queue_size=1)
   
   #self.cleararea_pub = rospy.Publisher("%s"%self.cleararea_marker_topic, Marker ,queue_size=1)
 
-  self.robotposition_pub = rospy.Publisher("%s"%self.Cposition_marker_topic, Marker ,queue_size=1)
+  #self.robotposition_pub = rospy.Publisher("%s"%self.Cposition_marker_topic, Marker ,queue_size=1)
 
   #self.obstacles_pub = rospy.Publisher("%s"%self.detected_obstacles_topic, LaserScan ,queue_size=1)
 
@@ -114,7 +115,7 @@ class laser_point():
   
   self.stop_flag = rospy.Publisher("%s"%self.stop_flag_topic, String ,queue_size=1)
 
-  self.marker_pub = rospy.Publisher("%s"%self.detector_marker_topic, Marker ,queue_size=1)
+  #self.marker_pub = rospy.Publisher("%s"%self.detector_marker_topic, Marker ,queue_size=1)
   
   print 'radiu',self.radius
   
@@ -123,7 +124,6 @@ class laser_point():
   self.map_data()
   rospy.Subscriber('/scan', LaserScan, self.laser_cb)
   rospy.Subscriber('/odom', Odometry, self.odom_cb)
-  #rospy.Subscriber('turtlebot_position_in_map', Pose, self.pose_cb)
   rospy.spin()
 
  def map_data(self):
@@ -142,7 +142,7 @@ class laser_point():
   
  def statice_area(self): #visual_test
   self.static_area = maplib.get_effective_point(self.map)[1]
-  self.static_area_makers()  
+  #self.static_area_makers()  
   #self.clear_area = maplib.get_effective_point(self.map)[0]
   #print 'block area:', len(self.static_area), '  clear area:', len(self.clear_area)
   #self.clear_area_makers()
@@ -559,15 +559,16 @@ class laser_point():
   self.pose.position.y = pos[1]
   self.pose.position.z = pos[2]
   
-  self.robot_position_marker()
-  self.robotposition_pub.publish(self.robot_position)
+  #self.robot_position_marker()
+  #self.robotposition_pub.publish(self.robot_position)
   
   #发布visual_test的结果
   try:
-   self.staticarea_pub.publish(self.points_marker) #marker out all static area
+   #self.staticarea_pub.publish(self.points_marker) #marker out all static area
    #self.cleararea_pub.publish(self.ClearPoints_marker)
    #self.marker_pub.publish(self.line_marker) #marker out divie line
    #self.marker_pub.publish(self.centre_points_marker)
+   pass
   except:
    pass
   
@@ -613,11 +614,11 @@ class laser_point():
   self.result = self.check(LaserData)
   #print self.result
   if self.result: 
-   rospy.loginfo('判断:是在误差许可之内为地图上已知点')
+   #rospy.loginfo('判断:是在误差许可之内为地图上已知点')
+   self.addFlag()
    """#发布visual_test的结果
    #self.LaserDataMarker(LaserData)
    #self.marker_pub.publish(self.laser_points_marker)"""
-   self.addFlag()
    """#CastData = [Mindistance, Maxdistance, MateData[0], MateData[-1]]"""
    #print 'CastData', len(CastData), '\n', CastData
    CastData = maplib.GradientDes(MateData)

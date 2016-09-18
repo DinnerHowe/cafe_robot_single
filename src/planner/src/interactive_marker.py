@@ -9,7 +9,8 @@ This program is free software; you can redistribute it and/or modify
 This programm is tested on kuboki base turtlebot. 
 
 """
-import rospy,copy
+import rospy
+import copy
 from visualization_msgs.msg import InteractiveMarker
 from visualization_msgs.msg import Marker
 from visualization_msgs.msg import InteractiveMarkerControl
@@ -21,8 +22,9 @@ from visualization_msgs.msg import InteractiveMarkerPose
 from visualization_msgs.msg import InteractiveMarkerUpdate
 from threading import Lock
 
-from geometry_msgs.msg import PointStamped#,PoseStamped,
-#from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseArray
+from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PointStamped
 
 #from nav_msgs.msg import Path
 #from std_msgs.msg import ColorRGBA
@@ -36,20 +38,32 @@ class Server:
   self.locker = Lock()
   self.obstacle=None
   self.root_topic='/'+root_topic
-  self.update_ = rospy.Publisher(self.root_topic+"/update", InteractiveMarkerUpdate ,queue_size=100)
-  self.init_ = rospy.Publisher(self.root_topic+'/update_full', InteractiveMarkerInit, queue_size=100)
-  self.projection_ = rospy.Publisher(self.root_topic+'/projection', PointStamped, queue_size=1)
-  self.ProjectionSize_pub = rospy.Publisher(self.root_topic+'/projection/size', String ,queue_size=1)
+  self.update_ = rospy.Publisher(self.root_topic+"/update", InteractiveMarkerUpdate ,queue_size=10)
+  self.init_ = rospy.Publisher(self.root_topic+'/update_full', InteractiveMarkerInit, queue_size=10)
+  self.projection_ = rospy.Publisher(self.root_topic+'/projection', PoseArray, queue_size=1)
   
+  self.seq = 0
   self.seq_num = 0
   self.server_id = self.root_topic
   
   self.Current = InteractiveMarkerUpdate()
   self.Candidate = InteractiveMarkerFeedback()
-  self.CurrentP = PointStamped()
+  self.CurrentP = Pose()
   
   rospy.Subscriber(self.root_topic+'/feedback', InteractiveMarkerFeedback, self.RvizFeedback, queue_size=10)
   rospy.Timer(rospy.Duration(0.1), self.standbycb)
+  rospy.Timer(rospy.Duration(10), self.ClearAll)
+  self.PublishInit()
+  
+ def ClearAll(self, event):
+  print 'clear data'
+  self.update_ = rospy.Publisher(self.root_topic+"/update", InteractiveMarkerUpdate ,queue_size=10)
+  self.init_ = rospy.Publisher(self.root_topic+'/update_full', InteractiveMarkerInit, queue_size=10)
+  self.projection_ = rospy.Publisher(self.root_topic+'/projection', PoseArray, queue_size=1)
+  
+  self.Current = InteractiveMarkerUpdate()
+  self.Candidate = InteractiveMarkerFeedback()
+  self.CurrentP = Pose()
   self.PublishInit()
   
  def AddObstacle(self, obstacle):
@@ -98,9 +112,29 @@ class Server:
  #投影到地图上
  def Projection(self):
   #print 'into Projection'
-  self.CurrentP.point = self.Candidate.pose.position
-  self.projection_.publish(self.CurrentP)
-  self.ProjectionSize_pub.publish('None')      
+  self.CurrentP.position = self.Candidate.pose.position
+  ProjectionDataSets = PoseArray()
+  ProjectionDataSets.header.seq = self.seq
+  ProjectionDataSets.header.stamp = rospy.Time.now()
+  ProjectionDataSets.header.frame_id = '/map'
+  ProjectionDataSets.poses.append(self.CurrentP)
+  ProjectionDataSets.poses = self.expand(ProjectionDataSets.poses)
+  self.projection_.publish(ProjectionDataSets)
+  self.seq += 1
+  
+ def expand(self, data):
+  origin = data[0]
+  pose = Pose()
+  for i in range(5):
+   pose.position.y = origin.position.y + 0.05 * i
+   pose.position.y = origin.position.y - 0.05 * i
+   for j in range(5):
+    pose.position.x = origin.position.x + 0.05 * j
+    data.append(copy.deepcopy(pose))
+    pose.position.x = origin.position.x - 0.05 * j
+    data.append(copy.deepcopy(pose))
+  return data
+   
         
  def RvizFeedback(self, feedback):
   with self.locker: 

@@ -3,6 +3,10 @@
 """
 multi-goal tasks,只录入目标点，actions_reference实现目标点迭代（完善）
 
+（待改动）
+
+不使用move_base，使用自己编写的planner
+
 Copyright (c) 2015 Xu Zhihao (Howe).  All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -22,28 +26,7 @@ from move_base_msgs.msg import MoveBaseAction
 from move_base_msgs.msg import MoveBaseGoal
 from nav_msgs.msg import Path
 from nav_msgs.msg import Odometry
-
-"""class cruise_modle():
- def __init__(self):
-  Plist=[]
-  Current_position = rospy.wait_for_message("turtlebot_position_in_map", Pose)
-  Plist.append(Current_position.position)
-  self.loading(Plist)
-
- def loading(self, Plist):
-  data=raw_input('请输入巡航的目标点数量： ')
-  try:
-   num = int(data)
-   for i in range(num):
-    rospy.loginfo ('预备录入第%s个目标点'%(i+1))
-    position =  rospy.wait_for_message("clicked_point",PointStamped)
-    rospy.loginfo ('已录入第%s个目标点'%(i+1))
-    Plist.append(position.point)
-   actions_reference.cruise(Plist)
-  except:
-   self.loading(Plist)"""
-   
-   
+     
 class cruise_modle():
  def __init__(self):
   self.define()

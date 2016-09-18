@@ -38,11 +38,13 @@ class marker():
   #self.marker.pose=data.pose.pose
   self.marker.pose=data
   self.marker.pose.position.z=0.5
+  
   if rospy.has_param('~robot_laber'):
    self.marker.text=rospy.get_param('~robot_laber')
   else:
    rospy.set_param('~robot_laber','default_robot')
    self.marker.text=rospy.get_param('~robot_laber')
+  #self.marker.text= '1' #for testing
   self.marker_pub.publish(self.marker)
    
  def __init__(self):

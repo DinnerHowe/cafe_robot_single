@@ -10,7 +10,11 @@ This program is free software; you can redistribute it and/or modify
 This programm is tested on kuboki base turtlebot. 
 
 """
-import rospy,getpass,actions_reference,actionlib,subprocess
+import rospy
+import getpass
+import actions_reference
+import actionlib
+import subprocess
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Point
 from move_base_msgs.msg import MoveBaseAction

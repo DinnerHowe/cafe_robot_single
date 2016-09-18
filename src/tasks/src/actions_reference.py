@@ -10,24 +10,55 @@ This programm is tested on kuboki base turtlebot.
 
 """
 
-import rospy,actionlib,getpass,move_reference,std_msgs.msg
+import rospy
+import actionlib
+import getpass
+import move_reference
+import std_msgs.msg
 from geometry_msgs.msg import PointStamped
-from nav_msgs.msg import Path,Odometry
-from move_base_msgs.msg import MoveBaseAction,MoveBaseGoal
+from nav_msgs.msg import Path
+from nav_msgs.msg import Odometry
+from move_base_msgs.msg import MoveBaseAction
+from move_base_msgs.msg import MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
 from visualization_msgs.msg import Marker
 from math import *
 
-#回航导航入口
+
+#巡航导航入口（交互）
 def cruise(Plist):
- #Current_point=rospy.wait_for_message("visualization_marker", Marker)
+ point_list = Plist
+ intial_point=point_list[0]
+ point_list.remove(intial_point)
+ multitasks(intial_point,Plist)
+ Plist.reverse()
+ return Plist
+ 
+#多任务执行口不停的更新目标点（spin）
+def multitasks(intial_point,Plist):
+ rospy.Subscriber('/move_base/DWAPlannerROS/global_plan',Path, MultiTasksCB, intial_point, Plist)
+
+def MultiTasksCB(path, intial_point, Plist):
+ count = 0
+ path_callback(intial_point,Plist[0])
+ for i in range(len(Plist)):
+  rospy.loginfo('moving forwarding to %s_st target'%count)
+  count+=1
+  if i < (len(Plist)-1):
+   print 'forward'
+   path_callback(Plist[i],Plist[i+1])
+  else:
+   print 'backward'
+   i=0
+    
+#回航导航入口
+"""def cruise(Plist):
  point_list=Plist
  intial_point=point_list[0]
  point_list.remove(intial_point)
- #point_list.append(intial_point)
  count=0
  multitasks(intial_point,Plist[0])
- print len(Plist)
+ #print len(Plist)
  while not rospy.is_shutdown():
   for i in range(len(Plist)):
    rospy.loginfo('moving forwarding to %s_st target'%count)
@@ -38,12 +69,41 @@ def cruise(Plist):
    else:
     print 'backward'
     Plist.reverse()
-    i=0
-    #multitasks(Plist[i],Plist[i-1])
-  
+    i=0"""
+     
+#多任务执行口不停的更新目标点(无法迭代reverse list)
+"""def multitasks(intial_point,point):
+ tasks(intial_point,point)
+ #path = rospy.wait_for_message('/move_base/TrajectoryPlannerROS/global_plan', Path)#仿真
+ path = rospy.wait_for_message('/move_base/DWAPlannerROS/global_plan', Path) 
+ Goal_updata(path, point)
 
+def Goal_updata(path, point):
+ move_base = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+ move_base.wait_for_server()
+ path_poses=path.poses
+ path_num=len(path_poses)
+ #print 'path_distance: ',path_num
+ if path_num>100:  
+  print 'long path model'
+  move_base.cancel_goal()
+  print 'cancel old goal and create a new goal'
+  new_goal = MoveBaseGoal()
+  new_angle=move_reference.angle_generater(path_poses[int(path_num*0.8)].pose.position,path_poses[int(path_num*0.7)].pose.position)
+  try:
+   new_goal.target_pose.header.frame_id = pose.header.frame_id
+  except:
+   new_goal.target_pose.header.frame_id = 'map'
+  new_goal.target_pose.pose.position=point
+  (new_goal.target_pose.pose.orientation.x,new_goal.target_pose.pose.orientation.y,new_goal.target_pose.pose.orientation.z,new_goal.target_pose.pose.orientation.w)=move_reference.angle_to_quat(new_angle)
+  move_base.send_goal(new_goal)
+ else:
+  move_base.send_goal(new_goal)"""
+  
+ 
+ 
 #多任务执行 #angle by goal && orientation
-def multitasks(intial_point,point):
+"""def multitasks(intial_point,point):
  move_base = actionlib.SimpleActionClient('move_base', MoveBaseAction)
  move_base.wait_for_server()
  goal = MoveBaseGoal()
@@ -69,10 +129,10 @@ def multitasks(intial_point,point):
    rospy.loginfo("Goal succeeded!")
    rospy.loginfo("State:" + str(state))
   else:
-   rospy.loginfo('fail to acheive goal')
+   rospy.loginfo('fail to acheive goal')"""
 
                   
-#单向导航入口 
+"""#单向导航入口 
 def go(current_odom,marker_point):
  if len(marker_point.points)==1:
   point_list=marker_point.points
@@ -81,9 +141,9 @@ def go(current_odom,marker_point):
   tasks(intial_point,task_point)
  else:
   rospy.loginfo('error in number of markers')
-  pass
+  pass"""
  
-#单向导航入口 
+#单向导航入口不停的更新目标点
 def go_single_marker(current_odom,marker_point):
  if len(marker_point.points)==1:
   point_list=marker_point.points
@@ -115,7 +175,9 @@ def tasks(intial_point,point):
 #任务执行 #angle by plan
 def plan_tasks(intial_point,point):
  tasks(intial_point,point)
- rospy.Subscriber('/move_base/TrajectoryPlannerROS/global_plan',Path, path_callback, point)
+ #rospy.Subscriber('/move_base/TrajectoryPlannerROS/global_plan',Path, path_callback, point)#仿真
+ rospy.Subscriber('/move_base/DWAPlannerROS/global_plan',Path, path_callback, point)
+ 
  
 #不停的规划新的路径
 def path_callback(path,point):
@@ -135,7 +197,7 @@ def path_callback(path,point):
   except:
    new_goal.target_pose.header.frame_id = 'map'
   new_goal.target_pose.pose.position=point
-  (new_goal.target_pose.pose.orientation.x,new_goal.target_pose.pose.orientation.y,new_goal.target_pose.pose.orientation.z,new_goal.target_pose.pose.orientation.w)=move_reference.angle_to_quat(new_angle)
+  (new_goal.target_pose.pose.orientation.x, new_goal.target_pose.pose.orientation.y, new_goal.target_pose.pose.orientation.z, new_goal.target_pose.pose.orientation.w) = move_reference.angle_to_quat(new_angle)
   move_base.send_goal(new_goal)
  else:
   pass

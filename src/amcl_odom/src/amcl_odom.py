@@ -16,10 +16,9 @@ class amcl_odom():
   while not rospy.is_shutdown():
    try:
     now = rospy.Time.now()
-    self.listener.waitForTransform(self.target_frame, self.source_frame, now, rospy.Duration(0.05))
+    self.listener.waitForTransform(self.target_frame, self.source_frame, now, rospy.Duration(0.01))
     (trans,rot)=self.listener.lookupTransform(self.target_frame, self.source_frame, now)
     self.pub_data(trans,rot)
-    rospy.sleep(0.1)
    except:
     continue
   

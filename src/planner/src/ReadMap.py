@@ -18,7 +18,7 @@ import copy
 from geometry_msgs.msg import Pose
 from threading import Lock
 import maplib
-from geometry_msgs.msg import PointStamped
+#from geometry_msgs.msg import PointStamped
 from geometry_msgs.msg import PoseArray
 from std_msgs.msg import String
 from nav_msgs.msg import MapMetaData 
@@ -30,7 +30,6 @@ class grid_map():
   self.define()
   self.init_map = self.ReadPGMMap()
   self.Map =  copy.deepcopy(self.init_map)
-  #self.Map.data = []
   self.start = True
   self.segments = 50
   """#try:
@@ -38,33 +37,36 @@ class grid_map():
    #rospy.Subscriber(self.root_topic+'/projection'+'/size', String, self.Size, queue_size=1)
   #except:"""
   rospy.Subscriber(self.root_topic+'/projection', PoseArray , self.MessPoses, queue_size=1)
-  rospy.Timer(rospy.Duration(0.1), self.Clear)
+  rospy.Timer(rospy.Duration(15), self.Reload)
+  rospy.Timer(rospy.Duration(0.5), self.Clear)
   self.AMCLMapSever()
   rospy.spin()
   
- def Size(self, data):
+ """def Size(self, data):
   #print 'data', data
   with self.locker:
    self.radiu = data.data
-  #print 'Size', self.radiu
+  #print 'Size', self.radiu"""
  
  def AMCLMapSever(self):
-  MapServer = rospy.Service('/static_map', GetMap, self.mapCallback)
+  with self.locker: 
+   MapServer = rospy.Service('/static_map', GetMap, self.mapCallback)
   
  def mapCallback(self, req):
-  rospy.loginfo('sending map')
-  res = self.Map
-  return res
+  with self.locker: 
+   rospy.loginfo('sending map')
+   res = self.Map
+   return res
 
  def MessPoses(self, poses):
-  self.Map.data = copy.deepcopy(self.init_map.data)
-  #print 'MessPoses'
   with self.locker: 
-   for pose in poses.poses:
-    num = maplib.position_num(self.Map, pose.position)
-    self.Map.data[num] = 100
+   if len(poses.poses) > 0:
+    self.Map.data = copy.deepcopy(self.init_map.data)
+    #print 'MessPoses'
+    for pose in poses.poses:
+     num = maplib.position_num(self.Map, pose.position)
+     self.Map.data[num] = 100
    self.map_pub.publish(self.Map)
-   
    
  """def MessPosition(self, position):
   with self.locker: 
@@ -97,6 +99,13 @@ class grid_map():
 
    #print 'MessPosition'
    self.map_pub.publish(self.Map)"""
+
+ def Reload(self, event):
+  with self.locker:
+   self.Map.data = copy.deepcopy(self.init_map.data)
+   self.map_pub.publish(self.Map)
+   #print 'repub' 
+   self.PubMetadata()
    
  def Clear(self,event):
   with self.locker:
@@ -106,9 +115,9 @@ class grid_map():
     #print 'clear'
    else:
     self.map_pub.publish(self.Map)
-    #print 'repub' 
    self.PubMetadata()
-
+   #print maplib.get_effective_point(self.Map)[1]
+  
   
  def PubMetadata(self): 
   self.map_metadata.publish(self.Map.info)
