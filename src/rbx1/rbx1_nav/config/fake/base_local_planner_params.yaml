@@ -1,41 +1,50 @@
-controller_frequency: 3.0
-recovery_behavior_enabled: false
-clearing_rotation_allowed: false
+DWAPlannerROS:
 
-TrajectoryPlannerROS:
-   max_vel_x: 0.5
-   min_vel_x: 0.1
-   max_vel_y: 0.0  # zero for a differential drive robot
-   min_vel_y: 0.0
-   max_vel_theta: 1.0
-   min_vel_theta: -1.0
-   min_in_place_vel_theta: 0.4
-   escape_vel: -0.1
-   acc_lim_x: 1.2
-   acc_lim_y: 0.0  # zero for a differential drive robot
-   acc_lim_theta: 1.2
+# Robot Configuration Parameters - Kobuki
+ max_vel_x: 0.3
+ min_vel_x: 0.0
 
-   holonomic_robot: false
-   yaw_goal_tolerance: 0.1 # about 6 degrees
-   xy_goal_tolerance: 0.05  # 5 cm
-   latch_xy_goal_tolerance: false
-   pdist_scale: 0.4
-   gdist_scale: 0.8
-   meter_scoring: true
+ max_vel_y: 0.0
+ min_vel_y: 0.0
 
-   heading_lookahead: 0.325
-   heading_scoring: false
-   heading_scoring_timestep: 0.8
-   occdist_scale: 0.05
-   oscillation_reset_dist: 0.05
-   publish_cost_grid_pc: false
-   prune_plan: true
+ max_trans_vel: 0.3
+ min_trans_vel: 0.1
+ tans_stopped_vel: 0.1
 
-   sim_time: 1.0
-   sim_granularity: 0.05
-   angular_sim_granularity: 0.1
-   vx_samples: 8
-   vy_samples: 0  # zero for a differential drive robot
-   vtheta_samples: 20
-   dwa: ture
-   simple_attractor: false
+ max_rot_vel: 1.0
+ min_rot_vel: 0.5 
+ rot_stopped_vel: 0.5
+
+ acc_lim_x: 0.3 
+ acc_lim_theta: 1.0
+ acc_lim_y: 0.0
+
+ #goal tolerance
+ yaw_goal_tolerance: 0.3
+ xy_goal_tolerance: 0.15
+ latch_xy_goal_tolerance: true
+
+ #forward simulation params
+ #sim_time: 1.0
+ vx_samples: 6
+ vy_samples: 1
+ #vtheta_samples: 20
+
+
+ path_distance_bias: 100.0
+ goal_distance_bias: 60.0
+ occdist_scale: 0.07
+ forward_point_distance: 0.325
+ stop_time_buffer: 0.2 
+ #scaling_speed: 0.25 
+ #max_scaling_factor: 0.2  
+
+ oscillation_reset_dist: 0.05
+
+# Debugging
+ #publish_traj_pc: true
+ #publish_cost_grid_pc: true
+ #global_frame_id: odom
+
+ #holonomic_robot: true
+

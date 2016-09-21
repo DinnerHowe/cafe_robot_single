@@ -140,7 +140,7 @@ class grid_map():
 
   
  def ReadPGMMap(self):
-  (self.image,self.resolution,self.origin,self.load_time)=  self.ReadYaml()
+  (self.image,self.resolution,self.origin,self.load_time) = self.ReadYaml()
    
   f=Image.open(self.filename+self.image)
   (width,height)=f.size

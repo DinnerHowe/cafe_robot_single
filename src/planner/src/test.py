@@ -9,9 +9,10 @@ This program is free software; you can redistribute it and/or modify
 This programm is tested on kuboki base turtlebot. 
 
 """
-import rospy,copy
+import rospy
+import copy
 from geometry_msgs.msg import Point
-
+from nav_msgs.msg import OccupancyGrid
 
 class test():
  def __init__(self):
@@ -31,11 +32,19 @@ class NewPoint(Point):
  #def __hash__(self):
  def __eq__(self, other):
   return self.x == other.x and self.y == other.y and self.z == other.z
-   
+
+class map_check():
+ def __init__(self):
+  rospy.Subscriber('/map', OccupancyGrid, self.MapCB)
+  rospy.spin()
+  
+ def MapCB(self, data):
+  print data.info
+ 
 if __name__=='__main__':
- try:
-  rospy.loginfo ("initialization system")
-  test()
-  rospy.loginfo ("process done and quit")
- except rospy.ROSInterruptException:
-  rospy.loginfo("robot twist node terminated.")
+ rospy.init_node('planner_test_node')
+ rospy.loginfo ("initialization system")
+ #test()
+ map_check()
+ rospy.loginfo ("process done and quit")
+

@@ -19,6 +19,7 @@ from nav_msgs.msg import OccupancyGrid
 import PlanAlgrithmsLib
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PointStamped
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import Twist
 from move_base_msgs.msg import MoveBaseGoal
@@ -30,7 +31,7 @@ class planner():
  def __init__(self):
   self.define()
   rospy.Subscriber('/map', OccupancyGrid, self.MapCB)
-  rospy.Subscriber("/clicked_point", PointStamped, self.GoalCB)#用啦来测试plan
+  rospy.Subscriber('/clicked_point', PointStamped, self.ClickCB)#用啦来测试plan
   rospy.Subscriber('/turtlebot_position_in_map', Pose, self.OdomCB)
   
   #rospy.Subscriber('/move_base/goal', MoveBaseGoal, self.GoalCB)# this is used to testing crash function
@@ -68,6 +69,7 @@ class planner():
 
  def OdomCB(self, data):
   with self.locker:
+   self.odom = data
    if self.SubGoal:
     self.CurrenPosition = data.position
     cmd = self.DifferCMD(self.CurrenPosition, self.SubGoal[0])
@@ -75,11 +77,17 @@ class planner():
      self.SubGoal.remove(self.SubGoal[0])
     else:
      self.Move(cmd)
+    if sel.AchieveGoal(self.Goal):
+     self.GoalState = 1
    
  def AchieveSubGoal(self, cmd):
-  if round(cmd.linear.x, self.Angle_accuracy) == 0 and round(cmd.angular.z, self.Angle_accuracy) == 0:
+  if round(cmd.linear.x, self.Angle_accuracy) == 0 and round(cmd.linear.y, self.Angle_accuracy) == 0 and round(cmd.angular.z, self.Angle_accuracy) == 0:
    return True 
    
+ def AchieveGoal(self, goal):
+  if round((self.odom.position.x - goal.target_pose.pose.position.x), self.Angle_accuracy) == 0 and round((self.odom.position.y - goal.target_pose.pose.position.y), self.Angle_accuracy) == 0 and round((self.odom.orientation.x - goal.target_pose.pose.orientation.x), self.Angle_accuracy) == 0 and round((self.odom.orientation.y - goal.target_pose.pose.orientation.y), self.Angle_accuracy) == 0 and round((self.odom.orientation.z - goal.target_pose.pose.orientation.z), self.Angle_accuracy) == 0 and round((self.odom.orientation.w - goal.target_pose.pose.orientation.w), self.Angle_accuracy) == 0:
+   return True
+ 
  def DifferCMD(self, CurrenPosition, SubGoal):
   trans = [SubGoal.x - CurrenPosition.x, SubGoal.y - CurrenPosition.y]
   if trans > (self.Position_accuracy, self.Position_accuracy):
@@ -97,16 +105,27 @@ class planner():
  def Move(self, cmd):
   MovePub = rospy.Publisher('/cmd_vel', Twist, queue_size = 1)
   MovePub.publish(cmd)
+
+ def ClickCB(self, data):
+  goal = MoveBaseGoal()
+  goal.target_pose.pose.position = data.point
+  goal.target_pose.pose.orientation.w = 1
+  goal.target_pose.header = data.header
+  self.GoalCB(goal)
  
  def GoalCB(self, data):
   with self.locker:
-   if self.seq_num != data.header.seq:
-    self.seq_num = data.header.seq
-    if self.GoalAchieveable(data, self.Map):
-     self.Goal_Update(data)
-     PlanPath = self.MakePlan(self.Map, self.CurrenPosition, self.Goal)
-     self.UpdateSubGoalList(PlanPath)
+   if self.seq_num != data.target_pose.header.seq:
+    self.seq_num = data.target_pose.header.seq
+    self.Goal_Update(data.target_pose)
+    print self.Map.info
+    if self.Map != OccupancyGrid():
+     if self.GoalAchieveable(self.Map, self.Goal):
+      PlanPath = self.MakePlan(self.Map.data, self.CurrenPosition, self.Goal)
+      self.UpdateSubGoalList(PlanPath)
 
+ def Goal_Update(self, data):
+  self.Goal = data.pose
      
  def UpdateSubGoalList(self, data): # self.SubGoal : pose[]
   self.SubGoal = data
@@ -117,17 +136,16 @@ class planner():
   else:
    Planner_Algrithm = rospy.get_param('~Planner_Algrithm')
    
+  rospy.loginfo('making a plan')
   if Planner_Algrithm == 'JPS':
    rospy.loginfo('making JPS plan')
    Plan = PlanAlgrithmsLib.Simple_JPS_Planner(data, start, goal)
   PublishPlan(Plan)
   print len(plan)
   return Plan
-     
- def Goal_Update(data):
-  self.Goal = data.pose
-     
+          
  def GoalAchieveable(self, _map, goal):
+  print type(_map),_map.info.resolution
   num = maplib.position_num(_map, goal)
   if _map.data[num] != 100:
    for i in range(self.radius):
@@ -135,6 +153,7 @@ class planner():
      if _map.data[_num +i * _map.info.width + j] != 100 and _map.data[_num + i * _map.info.width - j] != 100 and _map.data[_num - i * _map.info.width + j] != 100 and _map.data[_num - i * _map.info.width - j] != 100:
       pass
      else:
+      rospy.loginfo('Goal not achieveable')
       return False
    return True
     
@@ -167,7 +186,7 @@ class planner():
   self.Position_accuracy = 0.01
   self.seq_num = None
   self.plan_seq = 0
-  self.Map = OccupancyGrid()
+  self.Map = rospy.wait_for_message('/map', OccupancyGrid)
   self.SubGoal = []
   self.locker = Lock()
   self.radius = 8
