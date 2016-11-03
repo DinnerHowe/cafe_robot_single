@@ -26,7 +26,7 @@
     <arg name="3d_sensor"       value="$(arg 3d_sensor)" />
   </include>
   
-  <!--move_base driver-->
+  <!--mobile_base driver-->
   <include file="$(find machine)/launch/xml/mobile_base.launch.xml">
     <arg name="serialport"      value="$(arg serialport)" />
     <arg name="odom_frame"      value="$(arg odom_frame)" />

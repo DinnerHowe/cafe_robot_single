@@ -124,8 +124,12 @@ class grid_map():
   
  def define(self):
   self.locker = Lock()
-  
-  self.filename='/home/howe/cafe_robot_single/src/nav_staff/map/'
+
+  if not rospy.has_param('~map_file'):
+   rospy.set_param('~map_file','/home/howe/cafe_robot_single/src/nav_staff/map/')
+  else:
+   self.filename = rospy.get_param('~map_file')
+
   self.map_pub=rospy.Publisher("/map", OccupancyGrid ,queue_size=1)
   self.map_metadata=rospy.Publisher("/map_metadata", MapMetaData ,queue_size=1)
   self.root_topic='/test_obstacles'

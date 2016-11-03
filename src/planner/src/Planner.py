@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #coding=utf-8
 """ 
-planer
+planer: 订阅map goal odom 管理任务点，生成plan，由nav_staff 的 base_controller.py执行动作
 
 Copyright (c) 2016 Xu Zhihao (Howe).  All rights reserved.
 
@@ -72,11 +72,12 @@ class planner():
    self.odom = data
    if self.SubGoal:
     self.CurrenPosition = data.position
-    cmd = self.DifferCMD(self.CurrenPosition, self.SubGoal[0])
+    #cmd = self.DifferCMD(self.CurrenPosition, self.SubGoal[0])
     if self.AchieveSubGoal(cmd):
      self.SubGoal.remove(self.SubGoal[0])
     else:
-     self.Move(cmd)
+     #self.Move(cmd)
+     pass
     if sel.AchieveGoal(self.Goal):
      self.GoalState = 1
    
@@ -88,23 +89,23 @@ class planner():
   if round((self.odom.position.x - goal.target_pose.pose.position.x), self.Angle_accuracy) == 0 and round((self.odom.position.y - goal.target_pose.pose.position.y), self.Angle_accuracy) == 0 and round((self.odom.orientation.x - goal.target_pose.pose.orientation.x), self.Angle_accuracy) == 0 and round((self.odom.orientation.y - goal.target_pose.pose.orientation.y), self.Angle_accuracy) == 0 and round((self.odom.orientation.z - goal.target_pose.pose.orientation.z), self.Angle_accuracy) == 0 and round((self.odom.orientation.w - goal.target_pose.pose.orientation.w), self.Angle_accuracy) == 0:
    return True
  
- def DifferCMD(self, CurrenPosition, SubGoal):
-  trans = [SubGoal.x - CurrenPosition.x, SubGoal.y - CurrenPosition.y]
-  if trans > (self.Position_accuracy, self.Position_accuracy):
-   linear = 0.5 * ((trans[0])**2 + (trans[1])**2)
-   angular = 4 * numpy.actan(trans[1], trans[0])
-  else:
-   linear = 0.0
-   angular = round(Angle(SubGoal, CurrenPosition), self.Angle_accuracy)
+ #def DifferCMD(self, CurrenPosition, SubGoal):
+  #trans = [SubGoal.x - CurrenPosition.x, SubGoal.y - CurrenPosition.y]
+  #if trans > (self.Position_accuracy, self.Position_accuracy):
+  # linear = 0.5 * ((trans[0])**2 + (trans[1])**2)
+  # angular = 4 * numpy.actan(trans[1], trans[0])
+ # else:
+  # linear = 0.0
+  # angular = round(Angle(SubGoal, CurrenPosition), self.Angle_accuracy)
    
-  cmd = Twist()
-  cmd.linear.x = linear
-  cmd.angular.z = angular
-  return cmd
+ # cmd = Twist()
+ # cmd.linear.x = linear
+ # cmd.angular.z = angular
+  #return cmd
   
- def Move(self, cmd):
-  MovePub = rospy.Publisher('/cmd_vel', Twist, queue_size = 1)
-  MovePub.publish(cmd)
+ #def Move(self, cmd):
+  #MovePub = rospy.Publisher('/cmd_vel', Twist, queue_size = 1)
+  #MovePub.publish(cmd)
 
  def ClickCB(self, data):
   goal = MoveBaseGoal()

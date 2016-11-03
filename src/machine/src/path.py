@@ -84,7 +84,8 @@ class path_walker():
      self.walker(sub_path)
     else:
      pass
- 
+  
+  
  def ReadPath(self,path,filename):
   if type(path) is str:
    root_path=path.split('rviz_my_tools')[0]
@@ -118,5 +119,6 @@ if __name__=='__main__':
   rospy.loginfo ("initialization system")
   path_walker()
   rospy.loginfo ("process done and quit")
+  rospy.loginfo('path getted')
  except rospy.ROSInterruptException:
   rospy.loginfo("robot twist node terminated.")

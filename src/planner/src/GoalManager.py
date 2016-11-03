@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #coding=utf-8
 """ 
-goal manager
+goal manager:管理goal并且给planner发送goal
 
 Copyright (c) 2016 Xu Zhihao (Howe).  All rights reserved.
 
@@ -64,7 +64,7 @@ class GoalManage():
 
  def GoalUpdate(self, event):
   with self.lock:
-   print 'self.SGoal', self.SGoal, 'self.MGoal', self.MGoal
+   #print 'self.SGoal', self.SGoal, 'self.MGoal', self.MGoal
    if self.SGoal:
     rospy.loginfo('update single goal')
     if self.SGoalUpdata != self.SGoal:

@@ -12,6 +12,7 @@ This programm is tested on kuboki base turtlebot.
 """
 
 import rospy
+import copy
 from std_msgs.msg import Header
 from visualization_msgs.msg import InteractiveMarker
 from visualization_msgs.msg import InteractiveMarkerFeedback
@@ -21,6 +22,8 @@ from visualization_msgs.msg import InteractiveMarkerUpdate
 from threading import Lock
 
 from visualization_msgs.msg import MenuEntry
+
+from geometry_msgs.msg import Pose
 
 ###############################
 ##### Interactive Server ######
@@ -32,43 +35,56 @@ from visualization_msgs.msg import MenuEntry
  server.insert(obstacle)
  server.applyChanges()
 """
-
+DEFAULT_FEEDBACK_CB = 255
 
 class InteractiveMarkerServer:
  def __init__(self, root_topic):
-  self.define()
-  rospy.Subscriber(topic_ns+"/feedback", InteractiveMarkerFeedback, self.processFeedback, queue_size=q_size)
-  rospy.Timer(rospy.Duration(0.1), self.StandBy)
-  rospy.Timer(rospy.Duration(10), self.ClearAll)
-  self.publishInit()
+  self.define(root_topic)
+  rospy.Subscriber(self.root_topic+"/feedback", InteractiveMarkerFeedback, self.processFeedback, queue_size = self.q_size) 
+  rospy.Timer(rospy.Duration(0.5), self.StandBy)
+  rospy.Timer(rospy.Duration(0.5), self.ClearAll)
+  self.PublishInit()
     
     
- def define(self):
+ def define(self, root_topic):
   self.locker = Lock()
+  self.q_size = 10
   self.seq_num = 0
   self.root_topic = '/'+root_topic
   self.server_id = root_topic
-  self.obstacle=None
+  self.obstacle = None
   self.Current = InteractiveMarkerUpdate()
   self.Candidate = InteractiveMarkerFeedback()
   self.CurrentP = Pose()
   
-  self.DEFAULT_FEEDBACK_CB = 255
   self.Marker_Context = dict()
   
-  self.update_ = rospy.Publisher(self.root_topic+"/update", InteractiveMarkerUpdate ,queue_size=1)
-  self.init_ = rospy.Publisher(self.root_topic+'/update_full', InteractiveMarkerInit, queue_size=1)
+  self.update_ = rospy.Publisher(self.root_topic+"/update", InteractiveMarkerUpdate ,queue_size = self.q_size)
+  self.init_ = rospy.Publisher(self.root_topic+'/update_full', InteractiveMarkerInit, queue_size = self.q_size)
     
   
- def processFeedback(self, feedback)
+ def processFeedback(self, feedback):
   with self.locker: 
    self.Candidate = feedback
-   rospy.loginfo('\nfeedback: ' + '%s'%self.Candidate)
-   self.MovingServer()
-  
-  
- def MovingServer(self):
+   #rospy.loginfo('\nfeedback: ' + '%s'%self.Candidate)
+   if feedback.event_type == InteractiveMarkerFeedback.POSE_UPDATE:
+    self.MovingServer(self.Candidate) #1
+   if feedback.event_type == InteractiveMarkerFeedback.KEEP_ALIVE:
+    self.KeepAlive() #0
+   if feedback.event_type == InteractiveMarkerFeedback.MENU_SELECT:
+    self.MenuServer() #2
+   if feedback.event_type == InteractiveMarkerFeedback.BUTTON_CLICK:
+    self.ClickServer() #3
+   if feedback.event_type == InteractiveMarkerFeedback.MOUSE_DOWN:
+    self.ClickPushServer() #4
+   if feedback.event_type == InteractiveMarkerFeedback.MOUSE_UP:
+    self.ClickReleaseServer() #5
+
+
+ def MovingServer(self, Candidate):
   self.Current.type = InteractiveMarkerUpdate.UPDATE
+  #print 'self.Current.type', self.Current.type
+  #print 'MovingServer: self.obstacle: ', self.obstacle
   self.Current.seq_num = self.seq_num
   self.Current.markers.append(copy.deepcopy(self.obstacle))
    
@@ -77,7 +93,7 @@ class InteractiveMarkerServer:
   position.header.stamp = rospy.Time.now()
   position.header.frame_id = 'map'
   position.name = self.obstacle.name
-  position.pose = self.Candidate.pose
+  position.pose = Candidate.pose
 
   self.Current.poses.append(copy.deepcopy(position))
 
@@ -86,6 +102,31 @@ class InteractiveMarkerServer:
   self.PublishInit()
   
   
+ def KeepAlive(self):
+ #waiting for fill up function
+  pass
+  
+  
+ def MenuServer(self):
+ #waiting for fill up function
+  pass
+  
+  
+ def ClickServer(self):
+ #waiting for fill up function
+  pass
+  
+  
+ def ClickPushServer(self):
+ #waiting for fill up function
+  pass
+  
+  
+ def ClickReleaseServer(self):
+ #waiting for fill up function
+  pass
+
+
  def UpdateCB(self,data):
   data.server_id = self.server_id
   data.seq_num = self.seq_num
@@ -93,66 +134,78 @@ class InteractiveMarkerServer:
   
   
  def ClearAll(self, event):
-  self.update_ = rospy.Publisher(self.root_topic+"/update", InteractiveMarkerUpdate ,queue_size=1)
-  self.init_ = rospy.Publisher(self.root_topic+'/update_full', InteractiveMarkerInit, queue_size=1)
+  #with self.locker:
+   self.update_ = rospy.Publisher(self.root_topic+"/update", InteractiveMarkerUpdate ,queue_size=1)
+   self.init_ = rospy.Publisher(self.root_topic+'/update_full', InteractiveMarkerInit, queue_size=1)
   
-  self.Current = InteractiveMarkerUpdate()
-  self.Candidate = InteractiveMarkerFeedback()
-  self.CurrentP = Pose()
-  self.PublishInit()
+   self.Current = InteractiveMarkerUpdate()
+   self.Candidate = InteractiveMarkerFeedback()
+   self.CurrentP = Pose()
+   self.PublishInit()
 
 
  def StandBy(self, event):
-  with self.locker:
+  #with self.locker:
    stand_BY=InteractiveMarkerUpdate()
    stand_BY.type = InteractiveMarkerUpdate.KEEP_ALIVE
-   self.UpdateCB(standby)
+   self.UpdateCB(stand_BY)
 
   
- def insert(self, obstacle, feedback_cb = None, feedback_type = self.DEFAULT_FEEDBACK_CB):
+ def insert(self, obstacle, feedback_cb = None, feedback_type = DEFAULT_FEEDBACK_CB):
   with self.locker:
-   self.obstacle = obstacle
+   self.obstacle = copy.deepcopy(obstacle)
    self.Current.type = InteractiveMarkerFeedback.KEEP_ALIVE
-   self.Current.server_id = self.server_id
-   self.Current.seq_num = self.seq_num
-   self.Current.markers.append(self.obstacle)
-   self.Marker_Context[self.obstacle.name] = self.obstacle
+   self.Current.server_id = copy.deepcopy(self.server_id)
+   self.Current.seq_num = copy.deepcopy(self.seq_num)
+   self.Current.markers.append(copy.deepcopy(self.obstacle))
+   self.Marker_Context[copy.deepcopy(self.obstacle.name)] = copy.deepcopy(self.obstacle)
+   print 'insert self.Marker_Context: %s\n'%len(self.Marker_Context)#, self.Marker_Context
    
  def applyChanges(self):
   with self.locker:
+   #print 'applyChanges 1'
    if self.obstacle == None:
     return
    else:
+    #print 'applyChanges 2'
     self.Current.type = InteractiveMarkerUpdate.UPDATE
     self.Current.seq_num = self.seq_num
     self.Current.markers.append(copy.deepcopy(self.obstacle))
-
+    #print 'applyChanges 3'
     self.seq_num += 1   
     self.UpdateCB(self.Current)
+    #print 'applyChanges 4'
     self.PublishInit()
+    #print 'applyChanges 5'
   
-  
- def publishInit(self):
-  with self.locker:
+ def PublishInit(self):
+  #with self.locker:
+   #print 'PublishInit 1'
    initData = InteractiveMarkerInit()
    initData.server_id = self.server_id
    initData.seq_num = self.seq_num
+   #print 'PublishInit 2'
    if self.obstacle == None:
     #if there is no marker existing
     initData.markers=[]
+    #print 'PublishInit 3'
     self.init_.publish(initData)
+    #print 'PublishInit 4'
    else:
     initData.markers.append(self.obstacle)
+    #print 'PublishInit 5'
     #if there is a marker existing
     self.init_.publish(initData)
+    #print 'PublishInit 6'
     
     
  # @brief Get marker by name   
  def GetMarker(self, MarkerName):
+  print 'GetMarker: self.Marker_Context: \n', len(self.Marker_Context)
   if MarkerName in self.Marker_Context.keys():
    return self.Marker_Context[MarkerName]
   else:
-   rospy.loginfo('there is no marker named'+ MarkerName)
+   rospy.loginfo('GetMarker: there is no marker named: '+ MarkerName)
    return None
 
 
@@ -161,19 +214,24 @@ class InteractiveMarkerServer:
 ###############################   
  
 class MenuHandler:
- def __init__(self, root_topic):
+ NO_CHECKBOX = 0
+ CHECKED = 1
+ UNCHECKED = 2
+
+ def __init__(self):
   self.define()
 
 
 
  def define(self):
+  #self.locker = Lock()
   self.Menu_Context = {'Title': '', 'Command': '', 'CommandType': 0, 'ChirldItem': list(), 'Visible': True, 'CheckState': 0, 'FeedBack': None} 
   
-  self.MenuItemID = 1
+  self.MenuItemID = 0
 
-  self.NO_CHECKBOX = 0
-  self.CHECKED = 1
-  self.UNCHECKED = 2
+  self.NO_CHECKBOX = MenuHandler.NO_CHECKBOX
+  self.CHECKED = MenuHandler.CHECKED
+  self.UNCHECKED = MenuHandler.UNCHECKED
   
   self.MenuTree = dict()
   self.MenuItemIDs = list()
@@ -184,24 +242,31 @@ class MenuHandler:
  # insert a Mune info
  def InsertMenu(self, ChirldTitle, ParentTitleID = None, CommandType = MenuEntry.FEEDBACK, Command = '', Callback=None):
   CurrentItemID = self.Formalization(ChirldTitle, CommandType, Command, Callback)
+  #print 'lib CurrentItemID:', CurrentItemID
   if ParentTitleID is not None:
    # check if input parent is exist, if did exist, then store current CurrentItemID into Parent_Context['ChirldItem'], so that a menu tree is built
    if ParentTitleID in self.MenuTree.keys():
+    #print 'self.MenuTree.keys()\n', self.MenuTree.keys()
     Parent_Context = self.MenuTree[ParentTitleID]
     Parent_Context['ChirldItem'].append(CurrentItemID)
    else:
     rospy.logerr("Parent menu ID" + str(ParentTitleID) + " not found.")
     return None
   else:
-   # store all menu items' id in to a list for recording
-   self.MenuItemIDs.append(CurrentItemID)
+   pass
+  # store all menu items' id in to a list for recording
+  self.MenuItemIDs.append(CurrentItemID)
+
+  #print '\n\n\n##############\n', 'lib self.MenuTree.keys: ', self.MenuTree.keys(), '\n##############\n\n\n'
+  print '\n\n\n##############\n', 'lib self.MenuTree: ', self.MenuTree, '\n##############\n\n\n'
+  
   return CurrentItemID
 
 
 
  # store menue into a form make data orgnised
  def Formalization(self, ChirldTitle, CommandType, Command, Callback):
-  CurrentItemID = self.MenuItemID
+  CurrentItemID = copy.deepcopy(self.MenuItemID)
   self.MenuItemID += 1
   
   #formalise Menu Item info. by dict
@@ -210,11 +275,11 @@ class MenuHandler:
   MenuContext['CommandType'] = CommandType
   MenuContext['Command'] = Command
   MenuContext['Visible'] = True
-  MenuContext['CheckState'] = self.NO_CHECKBOX
+  MenuContext['CheckState'] = copy.deepcopy(self.NO_CHECKBOX)
   MenuContext['FeedBack'] = Callback
   
   # store one Menu Item info. into a dict named MenuTree
-  self.MenuTree[self.MenuItemID] = MenuContext
+  self.MenuTree[CurrentItemID] = MenuContext
   
   return CurrentItemID
  
@@ -239,7 +304,7 @@ class MenuHandler:
    Item_Context['CheckState'] = CheckState
    return True
   else:
-   rospy.logerr("Item menu ID" + str(ItemID) + " not found.")
+   #rospy.logerr("Item menu ID" + str(ItemID) + " not found.")
    return False
   
  
@@ -256,16 +321,18 @@ class MenuHandler:
    
   
  #divert callback for MENU_SELECT feedback to this manager 
- def ApplyMenuChanges(self, Server, MarkerName)
+ def ApplyMenuChanges(self, Server, MarkerName):
   marker = Server.GetMarker(MarkerName)#return InteractiveMarker
   self.MenuMarkerNames.append(MarkerName)
   #if has no marker
+  print 'ApplyMenuChanges if has no marker: ', not marker , '\nmarker named: ', MarkerName #, '\nmarker: ', marker,
   if not marker:
    self.MenuMarkerNames.remove(MarkerName)
-   rospy.loginfo('there is no marker named' + MarkerName + 'apply error change to menu object')
+   rospy.loginfo('there is no marker named ' + MarkerName + ' apply error change to menu object')
    return False
   marker.menu_entries = []
   parent_ID = 0
+  #print 'self.MenuItemIDs: ', self.MenuItemIDs
   self.AttachMenuToMarker(self.MenuItemIDs, marker.menu_entries, parent_ID)
   FeedbackType = InteractiveMarkerFeedback.MENU_SELECT
   Server.insert(marker, feedback_cb = self.MenueFeedback, feedback_type = FeedbackType)
@@ -274,16 +341,23 @@ class MenuHandler:
   
   
  def AttachMenuToMarker(self, MenuItemIDs, MarkerMenuEntries, parent_ID):
-  for ID in MenueItemIDs:
+  #print 'MarkerMenuEntries:\n', MarkerMenuEntries, '\nMenuItemIDs:\n', MenuItemIDs, '\n########################'
+  for ID in MenuItemIDs:
    if ID in self.MenuTree.keys():
     Menu_Context = self.MenuTree[ID]
     if Menu_Context['Visible']:
-     MarkerMenuEntries.append(self.MakeMenuEntry(Menu_Context, ID, parent_ID)
+     MarkerMenuEntries.append(self.MakeMenuEntry(Menu_Context, ID, parent_ID))
+    else:
+     rospy.loginfo("AttachMenuToMarker info: Menu Entry" + Menu_Context['Title'] + " not in MenuTree! ")
+     pass
+    #print Menu_Context['ChirldItem'], MarkerMenuEntries, ID
     if not self.AttachMenuToMarker(Menu_Context['ChirldItem'], MarkerMenuEntries, ID):
      return False
    else:
-    rospy.logerr("AttachMenuToMarker error: MenuItemIDs not in MenuTree! ")
+    rospy.logerr("AttachMenuToMarker error: MenuItemIDs:%s not in MenuTree! "%ID)
     return False
+    
+   ropsy.loginfo('MarkerMenuEntries: \n'+ str(MarkerMenuEntries))
    return True
    
    
